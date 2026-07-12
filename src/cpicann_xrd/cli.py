@@ -9,22 +9,21 @@ from typing import Annotated
 
 import typer
 
-from cpicann_xrd.catalog.catalog import PhaseCatalog, load_catalog_from_manifest
+from cpicann_xrd.catalog.catalog import load_catalog_from_manifest
 from cpicann_xrd.exceptions import CpicannXrdError
-from cpicann_xrd.model.cpicann_backend import CPICANNBackend
-from cpicann_xrd.model.fake_backend import FakeBackend
 from cpicann_xrd.model.loader import load_manifest
-from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import FilterSpec
 from cpicann_xrd.services.batch_runner import BatchRunResult, run_batch
 from cpicann_xrd.services.doctor import run_doctor
+from cpicann_xrd.services.runtime import (
+    DEFAULT_CATALOG_MANIFEST,
+    DEFAULT_MODEL_MANIFEST,
+    build_runtime,
+)
 from cpicann_xrd.settings import load_settings
 from cpicann_xrd.version import __version__
 
 PARTIAL_SUCCESS_EXIT_CODE = 3
-DEFAULT_MODEL_MANIFEST = Path("configs/models/cpicann-single-d1.yaml")
-DEFAULT_CATALOG_MANIFEST = Path("data/catalog/catalog_manifest.json")
-FAKE_CATALOG_MANIFEST = Path("data/catalog/phase5_fixture_catalog_manifest.json")
 
 app = typer.Typer(
     add_completion=False,
@@ -220,7 +219,7 @@ def _run_cli_batch(
     top_k: int,
 ) -> BatchRunResult:
     try:
-        backend, catalog = _build_runtime(backend_name)
+        backend, catalog = build_runtime(backend_name)
         return run_batch(
             input_paths=input_paths,
             output_root=output,
@@ -238,29 +237,6 @@ def _run_cli_batch(
     except ValueError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=2) from exc
-
-
-def _build_runtime(backend_name: str) -> tuple[InferenceBackend, PhaseCatalog]:
-    if backend_name == "fake":
-        catalog, _ = load_catalog_from_manifest(FAKE_CATALOG_MANIFEST)
-        backend: InferenceBackend = FakeBackend(
-            num_classes=len(catalog),
-            injected_logits=[0.0, 4.0, 3.0, -2.0, 1.0],
-        )
-        return backend, catalog
-    if backend_name == "cpicann":
-        settings = load_settings(cli_overrides={"backend": "cpicann"})
-        manifest = load_manifest(DEFAULT_MODEL_MANIFEST)
-        catalog, catalog_manifest = load_catalog_from_manifest(DEFAULT_CATALOG_MANIFEST)
-        if manifest.catalog_sha256 != catalog_manifest.catalog_sha256:
-            raise ValueError("模型 manifest 与 catalog manifest 的 SHA-256 不一致")
-        backend = CPICANNBackend(
-            manifest=manifest,
-            model_dir=settings.model_dir,
-            device=settings.device,
-        )
-        return backend, catalog
-    raise ValueError("backend must be fake or cpicann")
 
 
 def _emit_run_result(result: BatchRunResult, *, json_output: bool, mode: str) -> None:
