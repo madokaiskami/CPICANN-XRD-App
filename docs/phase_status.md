@@ -7,7 +7,7 @@
 | Phase 0 | 仓库基线与开发工具 | 通过 | 待验收 | AUTO_PASS |
 | Phase 1 | 上游审计与模型契约 | 通过 | 待验收 | AUTO_PASS |
 | Phase 2 | 核心类型、配置与 FakeBackend | 通过 | 待验收 | AUTO_PASS |
-| Phase 3 | 谱图读取与预处理 | 未开始 | 未开始 | TODO |
+| Phase 3 | 谱图读取与预处理 | 通过 | 待验收 | AUTO_PASS |
 | Phase 4 | 真实 CPICANN 模型加载与推理 | 未开始 | 未开始 | TODO |
 | Phase 5 | 类别目录、元素过滤与置信度重算 | 未开始 | 未开始 | TODO |
 | Phase 6 | 批量任务、输出、诊断和中文报告 | 未开始 | 未开始 | TODO |
@@ -42,3 +42,14 @@
 - 未实现真实 CPICANNBackend、真实 catalog、元素过滤、置信度重算、Web 或 API。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 3。
+
+## Phase 3 Notes
+
+- 已实现 `.txt`、`.csv`、`.xy` 谱图读取，扩展名大小写不敏感。
+- 已支持空格、Tab、逗号分隔，两列和三列输入；三列按 legacy 合同使用第二列减第三列作为强度。
+- 已记录/处理表头、非法行、倒序角度、重复角度、NaN/Inf、空文件和不支持扩展名。
+- 已实现 `legacy-cpicann-v1` 固定 10-80 度、4500 点、最大强度归一到 100 的预处理输出。
+- 已加入可再分发的合成 `0-norm.txt`、`1-norm.txt`、`3-norm.txt` fixtures 和 golden hash；它们不是上游真实样品。
+- 未实现真实模型、Web、API、catalog 或元素过滤。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 4。
