@@ -8,7 +8,7 @@
 | Phase 1 | 上游审计与模型契约 | 通过 | 待验收 | AUTO_PASS |
 | Phase 2 | 核心类型、配置与 FakeBackend | 通过 | 待验收 | AUTO_PASS |
 | Phase 3 | 谱图读取与预处理 | 通过 | 待验收 | AUTO_PASS |
-| Phase 4 | 真实 CPICANN 模型加载与推理 | 未开始 | 未开始 | TODO |
+| Phase 4 | 真实 CPICANN 模型加载与推理 | 通过 | 待验收 | AUTO_PASS |
 | Phase 5 | 类别目录、元素过滤与置信度重算 | 未开始 | 未开始 | TODO |
 | Phase 6 | 批量任务、输出、诊断和中文报告 | 未开始 | 未开始 | TODO |
 | Phase 7 | CLI 产品化 | 未开始 | 未开始 | TODO |
@@ -53,3 +53,17 @@
 - 未实现真实模型、Web、API、catalog 或元素过滤。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 4。
+
+## Phase 4 Notes
+
+- 已实现 CPICANN 单相网络最小推理定义、CPICANNBackend、manifest YAML、权重 SHA-256 校验和模型目录解析。
+- 已实现 `doctor` 服务和 `cpicann-xrd doctor --backend fake` 命令。
+- 已实现 `scripts/verify_model_bundle.py`、`scripts/convert_checkpoint.py` 和显式 opt-in 的 `scripts/download_model.py`。
+- 已将本地真实 checkpoint 放入 `models/cpicann-single-d1/CPICANNsingle_phase_D1.pth`，原始 SHA-256 为 `d2e898bb4b7482cd7b14953feac437b053617815746f025a6b88ca014e51be98`。
+- 原始 checkpoint 含 optimizer 对象，已按受控流程转换为纯 `state_dict` 运行期权重 `CPICANNsingle_phase_D1.state_dict.pth`，SHA-256 为 `0f3a452da5218df46eaa37f7d0dadb388e08cdeafa6e24e9d6e2e93512bb2e9a`。
+- 无权重时 `doctor --backend cpicann` 和 verify 脚本返回 `MODEL_NOT_INSTALLED`，不输出敏感 token 或栈追踪。
+- 真实模型测试已标记为 `model`，未配置 `CPICANN_MODEL_DIR` 时跳过；配置本地真实权重后 smoke test 已通过。
+- 已使用 `samples/CPICANN识别/0-norm.txt`、`1-norm.txt`、`3-norm.txt` 做样品级真实 smoke，覆盖谱图读取、预处理、真实模型前向和 top-5 class index 稳定性。
+- 未提交真实权重；未实现 catalog、元素过滤、Web、API 或带物相名称的真实预测 golden test。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 5。

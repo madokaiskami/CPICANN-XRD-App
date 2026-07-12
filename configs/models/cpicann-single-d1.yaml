@@ -1,0 +1,14 @@
+model_id: cpicann-single-d1
+backend: cpicann
+num_classes: 23073
+architecture: CPICANN(embed_dim=128,nhead=8,layers=6)
+preprocessing_version: legacy-cpicann-v1
+input_points: 4500
+source_url: https://huggingface.co/AI4Cryst/CPICANN
+source_revision: 3dbfaeab51d272e013d211c7f957760b46ab41cc
+checkpoint_path: CPICANNsingle_phase_D1.pth
+checkpoint_sha256: d2e898bb4b7482cd7b14953feac437b053617815746f025a6b88ca014e51be98
+checkpoint_size_bytes: 172863787
+weight_path: CPICANNsingle_phase_D1.state_dict.pth
+weight_sha256: 0f3a452da5218df46eaa37f7d0dadb388e08cdeafa6e24e9d6e2e93512bb2e9a
+weight_size_bytes: 57687539
