@@ -11,7 +11,7 @@
 | Phase 4 | 真实 CPICANN 模型加载与推理 | 通过 | 待验收 | AUTO_PASS |
 | Phase 5 | 类别目录、元素过滤与置信度重算 | 通过 | 待验收 | AUTO_PASS |
 | Phase 6 | 批量任务、输出、诊断和中文报告 | 通过 | 待验收 | AUTO_PASS |
-| Phase 7 | CLI 产品化 | 未开始 | 未开始 | TODO |
+| Phase 7 | CLI 产品化 | 通过 | 待验收 | AUTO_PASS |
 | Phase 8 | Streamlit Web 应用 | 未开始 | 未开始 | TODO |
 | Phase 9 | FastAPI 接口 | 未开始 | 未开始 | TODO |
 | Phase 10 | Docker、CI/CD 与供应链控制 | 未开始 | 未开始 | TODO |
@@ -95,3 +95,17 @@
 - 尚未暴露 CLI `batch` 命令；CLI 产品化属于 Phase 7。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 7。
+
+## Phase 7 Notes
+
+- 已实现 Typer CLI：`doctor`、`predict`、`batch` 和 `models` 子命令。
+- `predict` 与 `batch` 只负责参数解析和结果展示，实际推理、过滤、输出和报告生成复用 service 层。
+- 已支持人类默认中文输出和 `--json` 机器可读输出。
+- `--backend fake` 使用小型 fixture catalog，仅用于测试和演示，并在中文输出中明确提示。
+- `--backend cpicann` 使用真实模型 manifest、真实 catalog manifest 和本地模型目录。
+- 已兼容计划中的元素参数写法：`--include-must Zr O`、`--allowed-elements Li Zr O`。
+- 参数错误使用退出码 2；任务失败使用退出码 1；部分成功批次使用稳定退出码 3。
+- `models install` 不默认下载模型，仅提示用户显式放置或下载权重。
+- 真实权重配置下，`cpicann-xrd predict --backend cpicann` smoke test 已通过。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 8。

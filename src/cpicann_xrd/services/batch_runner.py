@@ -228,10 +228,18 @@ def _discover_inputs(input_paths: list[Path]) -> list[Path]:
     files: list[Path] = []
     for path in input_paths:
         if path.is_dir():
-            files.extend(child for child in sorted(path.iterdir()) if child.is_file())
-        elif path.is_file():
+            files.extend(
+                child
+                for child in sorted(path.iterdir())
+                if child.is_file() and not _is_dotfile(child)
+            )
+        elif path.is_file() and not _is_dotfile(path):
             files.append(path)
     return sorted(files, key=lambda item: item.name)
+
+
+def _is_dotfile(path: Path) -> bool:
+    return path.name.startswith(".")
 
 
 def _write_sample_outputs(
