@@ -21,7 +21,13 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
 ]
-dependencies = ["typer>=0.12.5,<1"]
+dependencies = [
+    "numpy>=1.26,<3",
+    "pydantic>=2.10,<3",
+    "pyyaml>=6.0.2,<7",
+    "torch>=2.5,<3",
+    "typer>=0.12.5,<1",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -30,6 +36,7 @@ dev = [
     "pytest>=8.3.3,<9",
     "pytest-cov>=5.0.0,<7",
     "ruff>=0.6.9,<1",
+    "types-PyYAML>=6.0.12,<7",
 ]
 
 [project.scripts]
@@ -37,6 +44,14 @@ cpicann-xrd = "cpicann_xrd.cli:main"
 
 [project.urls]
 Repository = "https://github.com/madokaiskami/CPICANN-XRD-App"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.hatch.build.targets.sdist]
 include = [

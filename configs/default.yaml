@@ -1,1 +1,7 @@
-# Default runtime configuration will be defined in a later phase.
+backend: fake
+model_dir: models
+model_id: cpicann-single-d1
+device: cpu
+output_dir: runs
+top_k: 5
+allow_model_download: false

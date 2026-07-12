@@ -6,7 +6,7 @@
 |---|---|---:|---:|---|
 | Phase 0 | 仓库基线与开发工具 | 通过 | 待验收 | AUTO_PASS |
 | Phase 1 | 上游审计与模型契约 | 通过 | 待验收 | AUTO_PASS |
-| Phase 2 | 核心类型、配置与 FakeBackend | 未开始 | 未开始 | TODO |
+| Phase 2 | 核心类型、配置与 FakeBackend | 通过 | 待验收 | AUTO_PASS |
 | Phase 3 | 谱图读取与预处理 | 未开始 | 未开始 | TODO |
 | Phase 4 | 真实 CPICANN 模型加载与推理 | 未开始 | 未开始 | TODO |
 | Phase 5 | 类别目录、元素过滤与置信度重算 | 未开始 | 未开始 | TODO |
@@ -33,3 +33,12 @@
 - 未找到 `0-norm.txt`、`1-norm.txt`、`3-norm.txt`；这些 fixture 的 golden 统计需在 Phase 3 补齐。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 2。
+
+## Phase 2 Notes
+
+- 已定义核心 Pydantic schema、稳定错误码、配置加载、模型 manifest/registry、InferenceBackend 协议和确定性 FakeBackend。
+- 已创建最小 `PredictionService`，可用 FakeBackend 驱动单样品预测结果。
+- 配置加载顺序已固定为 CLI 参数 > 环境变量 > 配置文件 > 默认值。
+- 未实现真实 CPICANNBackend、真实 catalog、元素过滤、置信度重算、Web 或 API。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 3。
