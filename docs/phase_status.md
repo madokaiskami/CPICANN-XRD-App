@@ -5,7 +5,7 @@
 | Phase | 内容 | 自动验收 | 人工验收 | 状态 |
 |---|---|---:|---:|---|
 | Phase 0 | 仓库基线与开发工具 | 通过 | 待验收 | AUTO_PASS |
-| Phase 1 | 上游审计与模型契约 | 未开始 | 未开始 | TODO |
+| Phase 1 | 上游审计与模型契约 | 通过 | 待验收 | AUTO_PASS |
 | Phase 2 | 核心类型、配置与 FakeBackend | 未开始 | 未开始 | TODO |
 | Phase 3 | 谱图读取与预处理 | 未开始 | 未开始 | TODO |
 | Phase 4 | 真实 CPICANN 模型加载与推理 | 未开始 | 未开始 | TODO |
@@ -23,3 +23,13 @@
 - 不包含真实模型、上游审计、类别目录或推理逻辑。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 1。
+
+## Phase 1 Notes
+
+- 已审计本地 GitHub fork、WPEM/CPICANN、HF source mirror、HF pretrained repository 和 `WPEMPhase==0.1.1` wheel。
+- 已创建模型合同、预处理合同和模型接入 ADR。
+- 已创建只读检查脚本 `scripts/inspect_upstream.py`。
+- 未下载真实权重；checkpoint 实际顶层键、state_dict 前缀和权重再分发许可仍为 UNKNOWN。
+- 未找到 `0-norm.txt`、`1-norm.txt`、`3-norm.txt`；这些 fixture 的 golden 统计需在 Phase 3 补齐。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 2。
