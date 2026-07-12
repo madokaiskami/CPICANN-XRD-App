@@ -31,7 +31,7 @@ def test_manifest_loads_phase4_model_contract() -> None:
     assert manifest.catalog_path == Path("data/catalog/cpicann_single_phase_d1_catalog.csv")
     assert (
         manifest.catalog_sha256
-        == "d4e94fa6eca60b1c8175cedbd9e697738ce311078c5b4d4cef287c827ab7f52a"
+        == "393fd648778c2f788efed0d29141051d4214f89152e46ef262e7213bc164e51f"
     )
 
 

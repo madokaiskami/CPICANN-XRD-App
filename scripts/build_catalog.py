@@ -58,7 +58,7 @@ def main() -> None:
             "space_group",
             "space_group_number",
         ]
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for record in sorted(records, key=lambda item: item.class_index):
             writer.writerow(

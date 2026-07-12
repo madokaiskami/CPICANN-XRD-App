@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_id": "cpicann-single-d1",
   "catalog_path": "cpicann_single_phase_d1_catalog.csv",
-  "catalog_sha256": "d4e94fa6eca60b1c8175cedbd9e697738ce311078c5b4d4cef287c827ab7f52a",
+  "catalog_sha256": "393fd648778c2f788efed0d29141051d4214f89152e46ef262e7213bc164e51f",
   "record_count": 23073,
   "source_path": "data/catalog/CPICANN_strucs_catalog.csv",
   "source_sha256": "749ccde48466588811c00adcd6f382f28ab27e0eec218140dec33a98ab3e0c0a"

@@ -87,7 +87,7 @@ def test_catalog_parses_formula_when_elements_are_missing(tmp_path: Path) -> Non
     catalog = PhaseCatalog.from_csv(catalog_path)
 
     assert catalog.get(0).elements == frozenset({"Li", "Zr", "O"})
-    assert catalog.get(0).reduced_formula == "Li2O3Zr"
+    assert catalog.get(0).reduced_formula == "Li2ZrO3"
 
 
 def test_catalog_rejects_invalid_element_symbols() -> None:

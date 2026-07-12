@@ -10,7 +10,7 @@
 | Phase 3 | 谱图读取与预处理 | 通过 | 待验收 | AUTO_PASS |
 | Phase 4 | 真实 CPICANN 模型加载与推理 | 通过 | 待验收 | AUTO_PASS |
 | Phase 5 | 类别目录、元素过滤与置信度重算 | 通过 | 待验收 | AUTO_PASS |
-| Phase 6 | 批量任务、输出、诊断和中文报告 | 未开始 | 未开始 | TODO |
+| Phase 6 | 批量任务、输出、诊断和中文报告 | 通过 | 待验收 | AUTO_PASS |
 | Phase 7 | CLI 产品化 | 未开始 | 未开始 | TODO |
 | Phase 8 | Streamlit Web 应用 | 未开始 | 未开始 | TODO |
 | Phase 9 | FastAPI 接口 | 未开始 | 未开始 | TODO |
@@ -75,10 +75,23 @@
 - 已实现基于过滤后 logits 的 masked softmax；未对已 softmax 概率再次 softmax。
 - `PredictionService` 在传入 catalog 时输出真实 `PhaseRecord`、`global_rank`、`filtered_rank`、过滤前概率和过滤后条件置信度。
 - 已将真实上游 catalog 移动到 `data/catalog/CPICANN_strucs_catalog.csv`，源文件 SHA-256 为 `749ccde48466588811c00adcd6f382f28ab27e0eec218140dec33a98ab3e0c0a`。
-- 已生成规范化运行期 catalog `data/catalog/cpicann_single_phase_d1_catalog.csv`，共 23073 条记录，SHA-256 为 `d4e94fa6eca60b1c8175cedbd9e697738ce311078c5b4d4cef287c827ab7f52a`。
+- 已生成规范化运行期 catalog `data/catalog/cpicann_single_phase_d1_catalog.csv`，共 23073 条记录，SHA-256 为 `393fd648778c2f788efed0d29141051d4214f89152e46ef262e7213bc164e51f`。
 - 模型 manifest 已锁定真实 catalog SHA-256，真实样品 smoke 已校验 top-5 class index 到 COD ID/公式的映射。
 - 已加入 `scripts/build_catalog.py --check-only`，当前默认校验真实 CPICANN 单相 D1 catalog；小型 fixture catalog 保留用于过滤真值表单元测试。
 - 至少 10 个 `class_index -> COD ID/公式/空间群` 映射仍需人工抽查；带人工确认物相名称的 golden test 仍需验收后补充。
-- 当前环境未安装 `pymatgen`，公式解析使用本地严格元素解析；后续接入真实 catalog 时可在同一构建脚本中增加 `pymatgen` 校验。
+- 已引入 `pymatgen`，catalog 构建使用 `pymatgen.core.Composition` 解析公式和 reduced formula，并保留项目级真实元素符号校验以拒绝 dummy species。
 - 自动验收命令已于 2026-07-12 通过。
 - 本阶段仍需人工验收后再进入 Phase 6。
+
+## Phase 6 Notes
+
+- 已实现 `RunContext`、run ID、输出目录创建、样品目录安全命名和重复文件名去重。
+- 已实现 FakeBackend 端到端批量任务，支持目录或文件列表输入，单样品失败不会中断批次。
+- 已生成标准输出：`summary.csv`、`summary_report.md`、`run_metadata.json`、`diagnostics.csv`、`input_manifest.csv`、`result_bundle.zip` 和每样品输出目录。
+- 每个成功样品会生成 `prediction_top5.csv`、`observed_xrd.png` 和 `preprocessed_xrd.csv`。
+- 已实现原子写入辅助函数，CSV/JSON/Markdown/PNG/ZIP 先写临时文件再替换。
+- 已覆盖 PNG/RAR 忽略、`bad.csv` 失败隔离、成功/失败/忽略数量统计、ZIP 可解压和 metadata 不写绝对输入路径。
+- 中文报告已包含单相模型和过滤后条件置信度解释限制。
+- 尚未暴露 CLI `batch` 命令；CLI 产品化属于 Phase 7。
+- 自动验收命令已于 2026-07-12 通过。
+- 本阶段仍需人工验收后再进入 Phase 7。
