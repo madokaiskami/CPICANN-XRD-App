@@ -1,0 +1,39 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# CPICANN model assets and generated outputs
+models/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# Local tooling
+.idea/
+.vscode/
