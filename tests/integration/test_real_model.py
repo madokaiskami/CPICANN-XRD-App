@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 import torch
 
+from cpicann_xrd.catalog.catalog import load_catalog_from_manifest
 from cpicann_xrd.core.preprocessing import preprocess_spectrum
 from cpicann_xrd.core.spectrum_io import read_spectrum_file
 from cpicann_xrd.model.cpicann_backend import CPICANNBackend
@@ -39,23 +40,49 @@ def test_real_model_sample_smoke_uses_local_samples() -> None:
         "0-norm.txt": (
             "1be59cd3854ec938fa51cec4a76bee01fe0a9240c75929697ee6d8973f098c4f",
             [21637, 6002, 9994, 9477, 6100],
+            [
+                ("1511098", "Er12 B12 O36"),
+                ("1535489", "K12 N4 O16"),
+                ("4128976", "Cu18 Se54 I18"),
+                ("1526876", "Sr14 Mn8 O30"),
+                ("7005928", "Hg6 Se8 O10"),
+            ],
         ),
         "1-norm.txt": (
             "2e325067f109f5c747bbad611cfc2c3d668346d6ab9be43352b5bbaaba022125",
             [15237, 20319, 15147, 10815, 19897],
+            [
+                ("1531376", "Ta4.002 Mn7.998 O18"),
+                ("7030244", "Fe4 H208 C136"),
+                ("4303952", "P8 Pd2 C180"),
+                ("2106594", "Ca9.811 Cl1.188 O3.344"),
+                ("4030623", "Nb2 Cr2 F12"),
+            ],
         ),
         "3-norm.txt": (
             "de58e6d8277bd5da70658ac9986a99f02859c91008ca3244763a895ccc269d86",
             [11272, 10803, 4143, 10245, 6100],
+            [
+                ("1511679", "La8 Re12 B28"),
+                ("7115169", "Sb16 Mo8 Se8"),
+                ("7223694", "Cu4 Te8 Br4"),
+                ("1541040", "Rb4 Ge4 Br12"),
+                ("7005928", "Hg6 Se8 O10"),
+            ],
         ),
     }
     if not sample_dir.exists():
         pytest.skip(f"sample directory is not available: {sample_dir}")
 
     manifest = load_manifest(Path("configs/models/cpicann-single-d1.yaml"))
+    catalog, catalog_manifest = load_catalog_from_manifest(
+        Path("data/catalog/catalog_manifest.json")
+    )
+    assert catalog_manifest.catalog_sha256 == manifest.catalog_sha256
+    assert len(catalog) == manifest.num_classes
     backend = CPICANNBackend(manifest=manifest, model_dir=Path(model_dir), device="cpu")
 
-    for filename, (input_sha256, expected_top5) in expected.items():
+    for filename, (input_sha256, expected_top5, expected_catalog_rows) in expected.items():
         result = read_spectrum_file(sample_dir / filename)
         assert result.status == "success"
         assert result.spectrum is not None
@@ -70,3 +97,7 @@ def test_real_model_sample_smoke_uses_local_samples() -> None:
         _, top_indices = torch.topk(probabilities, k=5)
 
         assert [int(index.item()) for index in top_indices] == expected_top5
+        assert [
+            (catalog.get(int(index.item())).cod_id, catalog.get(int(index.item())).formula)
+            for index in top_indices
+        ] == expected_catalog_rows

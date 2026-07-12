@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "model_id": "phase5-fixture-catalog",
+  "catalog_path": "phase5_fixture_catalog.csv",
+  "catalog_sha256": "ea8f48d207afa41fc017b8b738a6165ef2d20eba1faff9ee3111ccbcc652f596",
+  "record_count": 5,
+  "source_path": null,
+  "source_sha256": null
+}

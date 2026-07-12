@@ -16,6 +16,7 @@ from pydantic import (
     model_validator,
 )
 
+from cpicann_xrd.catalog.elements import validate_element_symbols
 from cpicann_xrd.exceptions import ErrorCode
 
 ELEMENT_RE = re.compile(r"^[A-Z][a-z]?$")
@@ -33,7 +34,7 @@ def _normalize_elements(value: Any) -> frozenset[str]:
     if invalid:
         msg = f"Invalid element symbols: {', '.join(invalid)}"
         raise ValueError(msg)
-    return elements
+    return validate_element_symbols(elements)
 
 
 def _sorted_elements(value: frozenset[str] | set[str]) -> list[str]:

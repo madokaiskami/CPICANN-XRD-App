@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import torch
 
+from cpicann_xrd.catalog.catalog import PhaseCatalog
+from cpicann_xrd.catalog.confidence import rank_predictions_from_logits
 from cpicann_xrd.exceptions import CpicannXrdError, ErrorCode
 from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import FilterSpec, PhaseRecord, PredictionItem, SamplePrediction
@@ -12,8 +14,9 @@ from cpicann_xrd.schemas import FilterSpec, PhaseRecord, PredictionItem, SampleP
 class PredictionService:
     """Small service layer wrapper around an inference backend."""
 
-    def __init__(self, backend: InferenceBackend) -> None:
+    def __init__(self, backend: InferenceBackend, *, catalog: PhaseCatalog | None = None) -> None:
         self._backend = backend
+        self._catalog = catalog
 
     def predict_tensor(
         self,
@@ -40,6 +43,30 @@ class PredictionService:
             )
         if logits.shape[0] != 1:
             raise ValueError("Phase 2 minimal prediction service accepts one sample at a time")
+
+        active_filter_spec = filter_spec or FilterSpec()
+        if self._catalog is not None:
+            predictions, candidate_count_after_filter, warnings = rank_predictions_from_logits(
+                logits,
+                catalog=self._catalog,
+                filter_spec=active_filter_spec,
+                top_k=top_k,
+            )
+            return SamplePrediction(
+                sample_id=sample_id,
+                source_filename=source_filename,
+                status="success",
+                backend=model_info.backend,
+                model_id=model_info.model_id,
+                preprocessing_version=model_info.preprocessing_version,
+                filter_spec=active_filter_spec,
+                candidate_count_before_filter=model_info.num_classes,
+                candidate_count_after_filter=candidate_count_after_filter,
+                requested_top_k=top_k,
+                returned_top_k=len(predictions),
+                predictions=predictions,
+                warnings=warnings,
+            )
 
         probabilities = torch.softmax(logits[0], dim=0)
         returned_top_k = min(top_k, model_info.num_classes)
@@ -71,7 +98,7 @@ class PredictionService:
             backend=model_info.backend,
             model_id=model_info.model_id,
             preprocessing_version=model_info.preprocessing_version,
-            filter_spec=filter_spec or FilterSpec(),
+            filter_spec=active_filter_spec,
             candidate_count_before_filter=model_info.num_classes,
             candidate_count_after_filter=model_info.num_classes,
             requested_top_k=top_k,

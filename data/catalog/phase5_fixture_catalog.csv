@@ -1,0 +1,6 @@
+class_index,cod_id,formula,reduced_formula,elements,space_group,space_group_number
+0,FIXTURE-00000,Li2ZrO3,Li2O3Zr,"Li,O,Zr",P2_1/c,14
+1,FIXTURE-00001,ZrO2,O2Zr,"O,Zr",P4_2/nmc,137
+2,FIXTURE-00002,LiZrTiO4,LiO4TiZr,"Li,O,Ti,Zr",Pnma,62
+3,FIXTURE-00003,HfZrO4,HfO4Zr,"Hf,O,Zr",I4/mmm,139
+4,FIXTURE-00004,Li2O,Li2O,"Li,O",Fm-3m,225

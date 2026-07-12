@@ -28,6 +28,11 @@ def test_manifest_loads_phase4_model_contract() -> None:
         manifest.weight_sha256
         == "0f3a452da5218df46eaa37f7d0dadb388e08cdeafa6e24e9d6e2e93512bb2e9a"
     )
+    assert manifest.catalog_path == Path("data/catalog/cpicann_single_phase_d1_catalog.csv")
+    assert (
+        manifest.catalog_sha256
+        == "d4e94fa6eca60b1c8175cedbd9e697738ce311078c5b4d4cef287c827ab7f52a"
+    )
 
 
 def test_missing_weight_raises_model_not_installed(tmp_path: Path) -> None:
