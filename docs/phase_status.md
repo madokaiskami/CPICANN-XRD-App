@@ -13,7 +13,7 @@
 | Phase 6 | 批量任务、输出、诊断和中文报告 | 通过 | 待验收 | AUTO_PASS |
 | Phase 7 | CLI 产品化 | 通过 | 待验收 | AUTO_PASS |
 | Phase 8 | Streamlit Web 应用 | 通过 | 待验收 | AUTO_PASS |
-| Phase 9 | FastAPI 接口 | 未开始 | 未开始 | TODO |
+| Phase 9 | FastAPI 接口 | 通过 | 待验收 | AUTO_PASS |
 | Phase 10 | Docker、CI/CD 与供应链控制 | 未开始 | 未开始 | TODO |
 | Phase 11 | 真实模型 Golden Test、发布候选与验收 | 未开始 | 未开始 | TODO |
 
@@ -121,3 +121,16 @@
 - FakeBackend 演示路径已覆盖 `.txt` 成功输入和 `.png` unsupported ignored 诊断。
 - 自动验收命令已于 2026-07-12 通过；Streamlit 启动验收因沙箱禁止监听端口需提权运行，提权后已成功启动到 `http://localhost:8501`。
 - 仍需人工用真实浏览器上传 `0-norm.txt`、`1-norm.txt`、`3-norm.txt`、`observed.png` 验收交互体验和下载文件内容。
+
+## Phase 9 Notes
+
+- 已实现 FastAPI 应用 `cpicann_xrd.api.main:app`，包含 `/healthz`、`/readyz`、`/v1/models`、`/v1/predict`、`/v1/batch`、`/v1/runs/{run_id}` 和 `/v1/runs/{run_id}/download`。
+- API 调用现有 `build_runtime`、`run_batch` 和 schema/service 层；未引入数据库、Celery、Redis 或远程 URL 下载。
+- 上传文件写入请求级临时隔离目录，限制数量和大小，文件名只保留 basename 并处理重复名。
+- 运行输出写入固定 API run root，响应只返回 `run_id`、counts、诊断、预测和 artifact 状态，不返回本地绝对路径。
+- 已加入请求 ID 中间件，支持 `X-Request-ID` 透传，并在稳定错误结构中返回 `error.code`、`error.message` 和 `error.request_id`。
+- API 同步接口面向小批量请求，响应文案记录建议客户端超时不低于 120 秒。
+- 测试覆盖 OpenAPI 路由、fake backend 预测、batch 中 unsupported file 诊断、run 查询/下载、上传大小限制、安全文件名和错误结构。
+- 本地 TestClient/ASGITransport 在当前沙箱会阻塞，`tests/integration/test_api.py` 直接调用端点函数和 API helper；Uvicorn 启动验收已单独通过。
+- 自动验收命令已于 2026-07-12 通过；Uvicorn 启动验收因沙箱禁止监听端口需提权运行，提权后已成功启动到 `http://127.0.0.1:8000`。
+- 仍需人工用 HTTP 客户端上传真实样品到 `/v1/predict` 或 `/v1/batch`，确认真实模型路径与 Web/CLI 一致。

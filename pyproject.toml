@@ -22,13 +22,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
+    "fastapi>=0.115,<0.116",
     "numpy>=1.26,<3",
     "pydantic>=2.10,<3",
     "pymatgen>=2024.10,<2027",
+    "python-multipart>=0.0.20,<1",
     "pyyaml>=6.0.2,<7",
     "streamlit>=1.40,<2",
     "torch>=2.5,<3",
     "typer>=0.12.5,<1",
+    "uvicorn[standard]>=0.30,<1",
 ]
 
 [project.optional-dependencies]
@@ -94,3 +97,6 @@ source = ["cpicann_xrd"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+
+[dependency-groups]
+dev = []
