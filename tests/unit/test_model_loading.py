@@ -25,8 +25,7 @@ def test_manifest_loads_phase4_model_contract() -> None:
     )
     assert manifest.weight_path == Path("CPICANNsingle_phase_D1.state_dict.pth")
     assert (
-        manifest.weight_sha256
-        == "0f3a452da5218df46eaa37f7d0dadb388e08cdeafa6e24e9d6e2e93512bb2e9a"
+        manifest.weight_sha256 == "0f3a452da5218df46eaa37f7d0dadb388e08cdeafa6e24e9d6e2e93512bb2e9a"
     )
     assert manifest.catalog_path == Path("data/catalog/cpicann_single_phase_d1_catalog.csv")
     assert (

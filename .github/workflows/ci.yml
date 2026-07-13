@@ -21,7 +21,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Check CLI version
         run: uv run cpicann-xrd --version
@@ -36,4 +36,24 @@ jobs:
         run: uv run mypy src
 
       - name: Test
-        run: uv run pytest -q
+        run: uv run pytest -q -m "not model"
+
+      - name: Export runtime dependency inventory
+        run: uv export --format requirements.txt --no-dev --no-emit-project --no-hashes --no-header --frozen --output-file dependency-inventory.txt > /dev/null
+
+      - name: Export CycloneDX SBOM
+        run: uv export --format cyclonedx1.5 --no-dev --no-emit-project --frozen --output-file sbom.cdx.json > /dev/null
+
+      - name: Dependency vulnerability scan
+        continue-on-error: true
+        run: |
+          uvx pip-audit --requirement dependency-inventory.txt --format json --output dependency-audit.json
+
+      - name: Upload supply-chain reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-reports
+          path: |
+            dependency-inventory.txt
+            sbom.cdx.json
+            dependency-audit.json

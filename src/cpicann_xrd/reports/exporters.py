@@ -121,10 +121,14 @@ def write_observed_png(path: Path, spectrum: SpectrumData) -> None:
                 x = margin_left + int(
                     (float(angle) - x_min) / (x_max - x_min) * (width - margin_left - margin_right)
                 )
-                y = height - margin_bottom - int(
-                    (float(intensity) - y_min)
-                    / (y_max - y_min)
-                    * (height - margin_top - margin_bottom)
+                y = (
+                    height
+                    - margin_bottom
+                    - int(
+                        (float(intensity) - y_min)
+                        / (y_max - y_min)
+                        * (height - margin_top - margin_bottom)
+                    )
                 )
                 points.append((x, y))
             for start, end in pairwise(points):

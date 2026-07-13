@@ -14,7 +14,7 @@
 | Phase 7 | CLI 产品化 | 通过 | 待验收 | AUTO_PASS |
 | Phase 8 | Streamlit Web 应用 | 通过 | 待验收 | AUTO_PASS |
 | Phase 9 | FastAPI 接口 | 通过 | 待验收 | AUTO_PASS |
-| Phase 10 | Docker、CI/CD 与供应链控制 | 未开始 | 未开始 | TODO |
+| Phase 10 | Docker、CI/CD 与供应链控制 | 通过 | 待验收 | AUTO_PASS |
 | Phase 11 | 真实模型 Golden Test、发布候选与验收 | 未开始 | 未开始 | TODO |
 
 ## Phase 0 Notes
@@ -134,3 +134,17 @@
 - 本地 TestClient/ASGITransport 在当前沙箱会阻塞，`tests/integration/test_api.py` 直接调用端点函数和 API helper；Uvicorn 启动验收已单独通过。
 - 自动验收命令已于 2026-07-12 通过；Uvicorn 启动验收因沙箱禁止监听端口需提权运行，提权后已成功启动到 `http://127.0.0.1:8000`。
 - 仍需人工用 HTTP 客户端上传真实样品到 `/v1/predict` 或 `/v1/batch`，确认真实模型路径与 Web/CLI 一致。
+
+## Phase 10 Notes
+
+- 已新增多阶段 CPU Dockerfile `docker/Dockerfile.cpu`，默认使用 GHCR Python/uv 基础镜像，运行时非 root 用户，默认启动 Streamlit Web。
+- 已新增 `compose.yaml`，默认服务暴露 Web `8501`，可选 `api` profile 暴露 FastAPI `8000`，并挂载 `./models` 与 `./runs`。
+- 已新增 `.dockerignore`，排除真实权重、运行输出、`.env`、缓存和构建产物。
+- 已更新普通 CI：格式、lint、mypy、非模型测试、依赖清单导出、CycloneDX SBOM 导出和依赖漏洞扫描；普通 CI 不访问模型 secret。
+- 已新增 `model-smoke.yml`，仅在手工触发或主分支受保护路径下使用 `CPICANN_MODEL_URL` secret 下载权重、验证哈希并运行真实模型 smoke。
+- 已新增 `docker.yml`，PR/main/tag 构建 CPU 镜像并运行 FakeBackend smoke；main/tag 推送 GHCR。
+- 已新增 `release.yml`，tag 构建 wheel/sdist、生成 SHA-256、发布不含权重的 GHCR 镜像和 GitHub Release。
+- 已生成运行时依赖清单 `docs/dependency-inventory.txt`，由 `uv export --frozen` 从 `uv.lock` 生成。
+- README 已加入 Docker 三步启动说明、真实权重挂载说明和供应链说明。
+- 本机 `docker compose config` 与 `docker compose --profile api config` 已通过。
+- 本机 Docker 验收已通过：`docker build -f docker/Dockerfile.cpu -t cpicann-xrd-app:test .`、容器内 `cpicann-xrd --version`、`cpicann-xrd doctor --backend fake`、`docker compose up -d --build`、`docker compose --profile api up -d --build api` 均已通过；API `/healthz` 返回 200，Web 首页返回 200。

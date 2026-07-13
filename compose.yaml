@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: cpicann-xrd-app:local
+    ports:
+      - "8501:8501"
+    environment:
+      CPICANN_MODEL_DIR: /app/models
+      CPICANN_API_RUN_ROOT: /app/runs/api
+    volumes:
+      - ./models:/app/models:ro
+      - ./runs:/app/runs
+    healthcheck:
+      test: ["CMD", "cpicann-xrd", "doctor", "--backend", "fake"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: cpicann-xrd-app:local
+    command:
+      - uvicorn
+      - cpicann_xrd.api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    environment:
+      CPICANN_MODEL_DIR: /app/models
+      CPICANN_API_RUN_ROOT: /app/runs/api
+    volumes:
+      - ./models:/app/models:ro
+      - ./runs:/app/runs
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

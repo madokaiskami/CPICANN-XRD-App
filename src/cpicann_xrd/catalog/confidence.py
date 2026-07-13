@@ -44,8 +44,7 @@ def rank_predictions_from_logits(
     unfiltered_probabilities = torch.softmax(one_dimensional_logits, dim=0)
     global_order = torch.argsort(one_dimensional_logits, descending=True)
     global_ranks = {
-        int(class_index.item()): rank
-        for rank, class_index in enumerate(global_order, start=1)
+        int(class_index.item()): rank for rank, class_index in enumerate(global_order, start=1)
     }
 
     valid_indices = torch.tensor(

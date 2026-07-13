@@ -1,0 +1,265 @@
+altair==6.2.2
+    # via streamlit
+annotated-doc==0.0.4
+    # via typer
+annotated-types==0.7.0
+    # via pydantic
+anyio==4.14.1
+    # via
+    #   starlette
+    #   streamlit
+    #   watchfiles
+attrs==26.1.0
+    # via
+    #   jsonschema
+    #   referencing
+bibtexparser==1.4.4
+    # via pymatgen-core
+blinker==1.9.0
+    # via streamlit
+cachetools==7.1.4
+    # via streamlit
+certifi==2026.6.17
+    # via requests
+charset-normalizer==3.4.9
+    # via requests
+click==8.4.2
+    # via
+    #   streamlit
+    #   uvicorn
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via
+    #   click
+    #   tqdm
+    #   typer
+contourpy==1.3.3
+    # via matplotlib
+cycler==0.12.1
+    # via matplotlib
+fastapi==0.115.14
+    # via cpicann-xrd
+filelock==3.29.7
+    # via torch
+fonttools==4.63.0
+    # via matplotlib
+fsspec==2026.6.0
+    # via torch
+gitdb==4.0.12
+    # via gitpython
+gitpython==3.1.51
+    # via streamlit
+h11==0.16.0
+    # via uvicorn
+httptools==0.8.0
+    # via
+    #   streamlit
+    #   uvicorn
+idna==3.18
+    # via
+    #   anyio
+    #   requests
+itsdangerous==2.2.0
+    # via streamlit
+jinja2==3.1.6
+    # via
+    #   altair
+    #   pydeck
+    #   torch
+joblib==1.5.3
+    # via pymatgen-core
+jsonschema==4.26.0
+    # via altair
+jsonschema-specifications==2025.9.1
+    # via jsonschema
+kiwisolver==1.5.0
+    # via matplotlib
+lxml==6.1.1
+    # via pymatgen-core
+markdown-it-py==4.2.0
+    # via rich
+markupsafe==3.0.3
+    # via jinja2
+matplotlib==3.11.0
+    # via pymatgen-core
+mdurl==0.1.2
+    # via markdown-it-py
+monty==2026.5.18
+    # via pymatgen-core
+mpmath==1.3.0
+    # via sympy
+narwhals==2.23.0
+    # via
+    #   altair
+    #   plotly
+networkx==3.6.1
+    # via
+    #   pymatgen-core
+    #   torch
+numpy==2.4.6 ; python_full_version < '3.12'
+    # via
+    #   contourpy
+    #   cpicann-xrd
+    #   matplotlib
+    #   monty
+    #   pandas
+    #   pydeck
+    #   pymatgen-core
+    #   scipy
+    #   spglib
+    #   streamlit
+numpy==2.5.1 ; python_full_version >= '3.12'
+    # via
+    #   contourpy
+    #   cpicann-xrd
+    #   matplotlib
+    #   monty
+    #   pandas
+    #   pydeck
+    #   pymatgen-core
+    #   scipy
+    #   spglib
+    #   streamlit
+orjson==3.11.9
+    # via pymatgen-core
+packaging==26.2
+    # via
+    #   altair
+    #   matplotlib
+    #   plotly
+    #   streamlit
+palettable==3.3.3
+    # via pymatgen-core
+pandas==3.0.3
+    # via
+    #   pymatgen-core
+    #   streamlit
+pillow==12.3.0
+    # via
+    #   matplotlib
+    #   streamlit
+plotly==6.9.0
+    # via pymatgen-core
+protobuf==7.35.1
+    # via streamlit
+pyarrow==25.0.0
+    # via streamlit
+pydantic==2.13.4
+    # via
+    #   cpicann-xrd
+    #   fastapi
+pydantic-core==2.46.4
+    # via pydantic
+pydeck==0.9.3
+    # via streamlit
+pygments==2.20.0
+    # via rich
+pymatgen==2026.5.4
+    # via cpicann-xrd
+pymatgen-core==2026.5.18
+    # via pymatgen
+pyparsing==3.3.2
+    # via
+    #   bibtexparser
+    #   matplotlib
+python-dateutil==2.9.0.post0
+    # via
+    #   matplotlib
+    #   pandas
+python-dotenv==1.2.2
+    # via uvicorn
+python-multipart==0.0.32
+    # via
+    #   cpicann-xrd
+    #   streamlit
+pyyaml==6.0.3
+    # via
+    #   cpicann-xrd
+    #   uvicorn
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.34.2
+    # via
+    #   pymatgen-core
+    #   streamlit
+rich==15.0.0
+    # via typer
+rpds-py==2026.6.3
+    # via
+    #   jsonschema
+    #   referencing
+ruamel-yaml==0.19.1
+    # via monty
+scipy==1.17.1 ; python_full_version < '3.12'
+    # via pymatgen-core
+scipy==1.18.0 ; python_full_version >= '3.12'
+    # via pymatgen-core
+setuptools==83.0.0
+    # via torch
+shellingham==1.5.4
+    # via typer
+six==1.17.0
+    # via python-dateutil
+smmap==5.0.3
+    # via gitdb
+spglib==2.7.0
+    # via pymatgen-core
+starlette==0.46.2
+    # via
+    #   fastapi
+    #   streamlit
+streamlit==1.59.1
+    # via cpicann-xrd
+sympy==1.14.0
+    # via
+    #   pymatgen-core
+    #   torch
+tabulate==0.10.0
+    # via pymatgen-core
+tenacity==9.1.4
+    # via streamlit
+toml==0.10.2
+    # via streamlit
+torch==2.13.0 ; sys_platform == 'darwin'
+    # via cpicann-xrd
+torch==2.13.0+cpu ; sys_platform != 'darwin'
+    # via cpicann-xrd
+tqdm==4.68.4
+    # via pymatgen-core
+typer==0.26.8
+    # via cpicann-xrd
+typing-extensions==4.16.0
+    # via
+    #   altair
+    #   anyio
+    #   fastapi
+    #   pydantic
+    #   pydantic-core
+    #   referencing
+    #   spglib
+    #   streamlit
+    #   torch
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via pydantic
+tzdata==2026.3 ; sys_platform == 'emscripten' or sys_platform == 'win32'
+    # via pandas
+uncertainties==3.2.3
+    # via pymatgen-core
+urllib3==2.7.0
+    # via requests
+uvicorn==0.51.0
+    # via
+    #   cpicann-xrd
+    #   streamlit
+uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
+    # via uvicorn
+watchdog==6.0.0 ; sys_platform != 'darwin'
+    # via streamlit
+watchfiles==1.2.0
+    # via uvicorn
+websockets==16.1
+    # via
+    #   streamlit
+    #   uvicorn

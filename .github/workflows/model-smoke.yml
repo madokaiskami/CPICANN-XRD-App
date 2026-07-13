@@ -1,0 +1,59 @@
+name: Model Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "configs/models/**"
+      - "src/cpicann_xrd/model/**"
+      - "src/cpicann_xrd/core/**"
+      - "src/cpicann_xrd/services/**"
+      - "tests/integration/test_real_model.py"
+
+jobs:
+  real-model-smoke:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras
+
+      - name: Download authorized model weights
+        env:
+          CPICANN_MODEL_URL: ${{ secrets.CPICANN_MODEL_URL }}
+          CPICANN_ALLOW_MODEL_DOWNLOAD: "true"
+        run: |
+          test -n "$CPICANN_MODEL_URL"
+          uv run python scripts/download_model.py --url "$CPICANN_MODEL_URL" --model-dir models --allow
+
+      - name: Verify model bundle hash
+        run: uv run python scripts/verify_model_bundle.py --model-dir models
+
+      - name: Run real-model tests
+        env:
+          CPICANN_MODEL_DIR: models
+        run: uv run pytest -q -m model
+
+      - name: Run real-model CLI batch smoke
+        env:
+          CPICANN_MODEL_DIR: models
+        run: |
+          uv run cpicann-xrd batch \
+            --backend cpicann \
+            --input examples/spectra \
+            --include-must Zr O \
+            --allowed-elements Li Zr O \
+            --top-k 5 \
+            --output /tmp/cpicann-model-smoke
