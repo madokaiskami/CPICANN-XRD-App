@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use CPICANN-XRD-App, cite this software and the upstream CPICANN model source."
+title: "CPICANN-XRD-App"
+version: "0.1.0rc1"
+type: software
+authors:
+  - name: "CPICANN-XRD-App contributors"
+repository-code: "https://github.com/madokaiskami/CPICANN-XRD-App"
+license: "MIT"
+keywords:
+  - XRD
+  - phase identification
+  - CPICANN
+  - materials science
+abstract: "A reproducible local application wrapper around CPICANN for XRD phase-identification workflows."
+preferred-citation:
+  type: software
+  title: "CPICANN-XRD-App"
+  authors:
+    - name: "CPICANN-XRD-App contributors"
+  repository-code: "https://github.com/madokaiskami/CPICANN-XRD-App"
+  version: "0.1.0rc1"
+  license: "MIT"

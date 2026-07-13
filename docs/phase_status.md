@@ -15,7 +15,7 @@
 | Phase 8 | Streamlit Web 应用 | 通过 | 待验收 | AUTO_PASS |
 | Phase 9 | FastAPI 接口 | 通过 | 待验收 | AUTO_PASS |
 | Phase 10 | Docker、CI/CD 与供应链控制 | 通过 | 待验收 | AUTO_PASS |
-| Phase 11 | 真实模型 Golden Test、发布候选与验收 | 未开始 | 未开始 | TODO |
+| Phase 11 | 真实模型 Golden Test、发布候选与验收 | 通过 | 待验收 | AUTO_PASS |
 
 ## Phase 0 Notes
 
@@ -148,3 +148,13 @@
 - README 已加入 Docker 三步启动说明、真实权重挂载说明和供应链说明。
 - 本机 `docker compose config` 与 `docker compose --profile api config` 已通过。
 - 本机 Docker 验收已通过：`docker build -f docker/Dockerfile.cpu -t cpicann-xrd-app:test .`、容器内 `cpicann-xrd --version`、`cpicann-xrd doctor --backend fake`、`docker compose up -d --build`、`docker compose --profile api up -d --build api` 均已通过；API `/healthz` 返回 200，Web 首页返回 200。
+
+## Phase 11 Notes
+
+- 已将包版本更新为 `0.1.0rc1`，对应人工发布标签 `v0.1.0-rc1`。
+- 已新增真实模型 golden baseline `tests/golden/real_model_samples.json`，覆盖 `samples/CPICANN识别/0-norm.txt`、`1-norm.txt`、`3-norm.txt` 的未过滤 Top-5 和 `include_must={Zr,O}`、`allowed_elements={Li,Zr,O}` 过滤后 Top-5。
+- Golden baseline 已记录输入 SHA-256、预处理数组 SHA-256、模型 revision、权重 SHA-256、catalog SHA-256、candidate count、空间群、logit、概率、过滤后条件置信度和浮点容差。
+- 已扩展 `tests/integration/test_real_model.py`，覆盖 CPU 重复运行稳定性、真实 golden 对比，以及 service/Web helper、CLI、API 三路过滤后结果一致性。
+- 已新增 `NOTICE`、`CITATION.cff`、`SECURITY.md`、`docs/known_limitations.md` 和 `docs/release_validation.md`，明确权重不再分发、公开镜像不含权重、置信度不是含量。
+- 本机 `uv sync --frozen --all-extras`、格式检查、lint、mypy、非模型测试、真实模型测试、包构建、`doctor --backend cpicann`、真实 CLI batch、RC Docker build 和容器内真实 batch 均已通过。
+- Docker 真实 batch 使用非 root 容器用户；宿主挂载输出目录必须对容器用户可写。本机验收使用 `/home/luojun/Codes/CPICANN/cpicann-container-test` 作为临时挂载输出目录。

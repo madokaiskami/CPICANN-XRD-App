@@ -9,6 +9,7 @@ on:
       - "src/cpicann_xrd/model/**"
       - "src/cpicann_xrd/core/**"
       - "src/cpicann_xrd/services/**"
+      - "tests/golden/real_model_samples.json"
       - "tests/integration/test_real_model.py"
 
 jobs:

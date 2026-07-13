@@ -1,0 +1,17 @@
+CPICANN-XRD-App Notice
+
+This repository contains product code, tests, documentation, and small spectrum
+fixtures for CPICANN-XRD-App. The application code is distributed under the
+license in LICENSE.
+
+The CPICANN model architecture and pretrained checkpoint are external research
+artifacts from the upstream CPICANN project. This repository does not include
+pretrained weight binaries, tokens, or private download credentials.
+
+The committed catalog files are used to map CPICANN class indices to phase
+metadata for reproducible local inference. Redistribution of the upstream model
+weights must be handled separately by users according to the upstream source and
+their institutional policy.
+
+Prediction confidence values are model ranking scores after optional filtering.
+They are not quantitative phase fractions or material composition estimates.

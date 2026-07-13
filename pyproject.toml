@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cpicann-xrd"
-version = "0.1.0.dev0"
+version = "0.1.0rc1"
 description = "Reproducible XRD phase-identification application around CPICANN."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -61,8 +61,13 @@ explicit = true
 [tool.hatch.build.targets.sdist]
 include = [
     "/AGENTS.md",
+    "/CITATION.cff",
     "/DEVELOPMENT_PLAN.md",
+    "/LICENSE",
+    "/NOTICE",
     "/README.md",
+    "/SECURITY.md",
+    "/docs",
     "/src",
     "/tests",
 ]

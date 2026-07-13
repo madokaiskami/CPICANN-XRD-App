@@ -23,12 +23,13 @@ from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import DiagnosticRecord, FilterSpec, ModelInfo, SamplePrediction
 from cpicann_xrd.services.batch_runner import BatchRunResult, run_batch
 from cpicann_xrd.services.runtime import build_runtime
+from cpicann_xrd.version import __version__
 
 API_TIMEOUT_SECONDS = 120
 
 app = FastAPI(
     title="CPICANN-XRD API",
-    version="0.1.0",
+    version=__version__,
     description="Synchronous local API for small CPICANN-XRD prediction batches.",
 )
 
