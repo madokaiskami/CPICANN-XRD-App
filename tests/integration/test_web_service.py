@@ -9,7 +9,7 @@ import pytest
 from cpicann_xrd.schemas import FilterSpec
 from cpicann_xrd.services.batch_runner import run_batch
 from cpicann_xrd.services.runtime import build_runtime
-from cpicann_xrd.web.app import _markdown_table
+from cpicann_xrd.web.app import WEB_BACKEND_NAME, _markdown_table
 from cpicann_xrd.web.service import available_elements, stage_uploaded_files
 
 
@@ -63,6 +63,10 @@ def test_available_elements_excludes_fake_placeholder() -> None:
     assert "O" in elements
     assert "Zr" in elements
     assert "X" not in elements
+
+
+def test_web_app_uses_real_backend_only() -> None:
+    assert WEB_BACKEND_NAME == "cpicann"
 
 
 def test_fake_web_service_path_records_unsupported_files(tmp_path: Path) -> None:

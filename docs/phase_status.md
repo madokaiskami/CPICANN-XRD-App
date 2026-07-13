@@ -115,10 +115,10 @@
 - 已实现本地 Streamlit 页面 `src/cpicann_xrd/web/app.py`，支持多文件上传、模型状态、元素过滤、Top-K、运行按钮、结果表、observed XRD 图、诊断提示和下载入口。
 - Web 页面复用 `build_runtime`、`run_batch` 和现有预测/过滤/报告服务；UI 不实现新的推理或过滤算法。
 - 已新增 `src/cpicann_xrd/web/service.py`，负责上传文件数量/大小限制、安全文件名、临时隔离目录暂存和可选元素列表。
-- 已通过 `st.cache_resource` 缓存 fake/cpicann runtime，避免同一会话重复加载模型。
+- 已通过 `st.cache_resource` 缓存 Web runtime，避免同一会话重复加载模型；Web 页面当前只暴露真实 `cpicann` 后端，FakeBackend 仅保留给 CLI/API 测试和 CI。
 - 上传结果写入会话临时目录；新运行会清理上一轮临时目录，避免页面渲染和下载前结果文件被提前删除。
 - 页面文案区分样品名称、模型预测物相、过滤前全局概率、过滤后条件置信度和单相候选排序，并提示条件置信度不代表实际多相含量。
-- FakeBackend 演示路径已覆盖 `.txt` 成功输入和 `.png` unsupported ignored 诊断。
+- Web service helper 的 FakeBackend 测试路径仍覆盖 `.txt` 成功输入和 `.png` unsupported ignored 诊断；生产 Web 页面不再提供 fake 后端选项。
 - 自动验收命令已于 2026-07-12 通过；Streamlit 启动验收因沙箱禁止监听端口需提权运行，提权后已成功启动到 `http://localhost:8501`。
 - 仍需人工用真实浏览器上传 `0-norm.txt`、`1-norm.txt`、`3-norm.txt`、`observed.png` 验收交互体验和下载文件内容。
 

@@ -19,6 +19,8 @@ from cpicann_xrd.services.batch_runner import BatchRunResult, run_batch
 from cpicann_xrd.services.runtime import build_runtime
 from cpicann_xrd.web.service import UploadedFileLike, available_elements, stage_uploaded_files
 
+WEB_BACKEND_NAME = "cpicann"
+
 
 def main() -> None:
     """Render and run the Streamlit application."""
@@ -27,7 +29,7 @@ def main() -> None:
     st.caption("单相 CPICANN 候选物相排序工具")
 
     with st.sidebar:
-        backend_name = st.selectbox("模型后端", ["fake", "cpicann"], index=0)
+        backend_name = WEB_BACKEND_NAME
         model_status = _model_status(backend_name)
         st.write(f"模型状态：{model_status}")
         elements = available_elements()
@@ -68,8 +70,6 @@ def _cached_runtime(backend_name: str) -> tuple[InferenceBackend, PhaseCatalog]:
 
 
 def _model_status(backend_name: str) -> str:
-    if backend_name == "fake":
-        return "FakeBackend 可用，仅用于演示"
     try:
         backend, _ = _cached_runtime(backend_name)
     except Exception:
