@@ -22,7 +22,11 @@ build/
 dist/
 *.egg-info/
 
-models/
+models/*
+!models/xdecomposer/
+models/xdecomposer/*
+!models/xdecomposer/README.md
+!models/xdecomposer/manifest.example.yaml
 runs/
 *.pt
 *.pth

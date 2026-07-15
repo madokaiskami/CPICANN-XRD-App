@@ -10,6 +10,7 @@ from typing import Annotated
 import typer
 
 from cpicann_xrd.catalog.catalog import load_catalog_from_manifest
+from cpicann_xrd.decomposition.assets import verify_xdecomposer_assets
 from cpicann_xrd.exceptions import CpicannXrdError
 from cpicann_xrd.model.loader import load_manifest
 from cpicann_xrd.schemas import FilterSpec
@@ -30,7 +31,9 @@ app = typer.Typer(
     help="CPICANN-XRD phase-identification application.",
 )
 models_app = typer.Typer(add_completion=False, help="模型资产管理。")
+xdecomposer_app = typer.Typer(add_completion=False, help="XDecomposer 资产与诊断。")
 app.add_typer(models_app, name="models")
+app.add_typer(xdecomposer_app, name="xdecomposer")
 
 
 def _version_callback(value: bool) -> None:
@@ -207,6 +210,44 @@ def models_install() -> None:
     """提示用户显式安装真实模型权重。"""
     typer.echo("不会默认下载模型。请显式使用 scripts/download_model.py 或放置本地权重后验证。")
     raise typer.Exit(code=1)
+
+
+@xdecomposer_app.command("verify-assets")
+def xdecomposer_verify_assets(
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="XDecomposer asset manifest YAML path."),
+    ],
+    production: Annotated[
+        bool,
+        typer.Option("--production", help="Require all licenses to be confirmed."),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Emit machine-readable JSON."),
+    ] = False,
+) -> None:
+    """验证 XDecomposer manifest、资产文件和 SHA-256。"""
+    try:
+        result = verify_xdecomposer_assets(manifest, production=production)
+    except CpicannXrdError as exc:
+        if json_output:
+            typer.echo(json.dumps({"status": "failed", "error": exc.to_dict()}, ensure_ascii=False))
+        else:
+            typer.echo(f"{exc.error_code.value}: {exc.message}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if json_output:
+        typer.echo(result.model_dump_json())
+        return
+    typer.echo("状态：ok")
+    typer.echo(f"模型：{result.model_id}")
+    typer.echo(f"Manifest：{result.manifest_path}")
+    typer.echo(f"生产模式：{result.production}")
+    if result.unconfirmed_license_fields:
+        typer.echo(f"未确认许可字段：{', '.join(result.unconfirmed_license_fields)}")
+    for asset in result.assets:
+        typer.echo(f"- {asset.name}: {asset.path} sha256={asset.actual_sha256}")
 
 
 def _run_cli_batch(
