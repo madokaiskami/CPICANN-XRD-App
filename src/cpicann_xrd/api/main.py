@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import uuid
 from collections.abc import Awaitable, Callable
@@ -28,8 +29,10 @@ from cpicann_xrd.api.service import api_run_root, resolve_run_dir, stage_api_upl
 from cpicann_xrd.catalog.catalog import PhaseCatalog, load_catalog_from_manifest
 from cpicann_xrd.core.spectrum_io import read_spectrum_file
 from cpicann_xrd.decomposition.capabilities import Capabilities, build_capabilities
+from cpicann_xrd.decomposition.client import XDecomposerHttpClient
 from cpicann_xrd.decomposition.exceptions import DecompositionError
 from cpicann_xrd.decomposition.orchestration import (
+    DecompositionBackend,
     MultiphaseIdentificationResult,
     identify_decomposed_components,
 )
@@ -490,7 +493,7 @@ def _capabilities_job_runner(context: JobExecutionContext) -> dict[str, Any]:
     return {"capabilities": payload}
 
 
-def _decomposition_backend_or_503(backend_name: str) -> StubDecompositionBackend:
+def _decomposition_backend_or_503(backend_name: str) -> DecompositionBackend:
     capabilities = build_capabilities(
         cpicann_available=_backend_available("cpicann"),
         xdecomposer_backend=backend_name,
@@ -502,6 +505,11 @@ def _decomposition_backend_or_503(backend_name: str) -> StubDecompositionBackend
         )
     if backend_name.strip().lower() in {"stub", "fake"}:
         return StubDecompositionBackend()
+    if backend_name.strip().lower() in {"remote", "service"}:
+        return XDecomposerHttpClient(
+            base_url=os.environ.get("CPICANN_XDECOMPOSER_SERVICE_URL", "http://127.0.0.1:8100"),
+            timeout_seconds=float(os.environ.get("CPICANN_XDECOMPOSER_TIMEOUT_SECONDS", "120")),
+        )
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         detail=f"XDecomposer unavailable: {capabilities.xdecomposer.reason}",

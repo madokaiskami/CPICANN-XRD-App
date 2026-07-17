@@ -54,6 +54,24 @@ def test_readyz_reports_ready_with_hash_verified_assets(tmp_path: Path) -> None:
     assert response.assets.num_sources == 4
 
 
+def test_readyz_allows_decomposition_only_manifest_without_reference_bank(tmp_path: Path) -> None:
+    manifest_path = _write_runtime_manifest(tmp_path)
+    data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    data["reference_bank_required"] = False
+    del data["reference_bank"]
+    manifest_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    response = build_ready(
+        Settings(
+            manifest_path=manifest_path,
+            expected_python_minor=_current_python_minor(),
+        )
+    )
+
+    assert response.status == "ready"
+    assert response.assets.assets_present is True
+
+
 def test_info_reports_optional_upstream_import(tmp_path: Path) -> None:
     manifest_path = _write_runtime_manifest(tmp_path)
     source_dir = tmp_path / "upstream"
@@ -80,6 +98,7 @@ def test_require_upstream_import_blocks_readiness_when_missing(tmp_path: Path) -
     response = build_ready(
         Settings(
             manifest_path=manifest_path,
+            upstream_source_dir=tmp_path / "missing-upstream",
             require_upstream_import=True,
             expected_python_minor=_current_python_minor(),
         )

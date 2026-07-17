@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 from cpicann_xrd.exceptions import CpicannXrdError, ErrorCode
 from cpicann_xrd.model.hash import sha256_file
@@ -50,18 +50,26 @@ class XDecomposerAssetManifest(StrictBaseModel):
     cuda: str = Field(min_length=1)
     xrd_length: int = Field(gt=0)
     num_sources: int = Field(gt=0)
+    reference_bank_required: bool = True
     separator_checkpoint: XDecomposerAssetRef
     mae_checkpoint: XDecomposerAssetRef
-    reference_bank: XDecomposerAssetRef
+    reference_bank: XDecomposerAssetRef | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def reference_bank_must_be_present_when_required(self) -> XDecomposerAssetManifest:
+        if self.reference_bank_required and self.reference_bank is None:
+            raise ValueError("reference_bank is required when reference_bank_required is true")
+        return self
 
     def unconfirmed_license_fields(self) -> list[str]:
         """Return license fields still set to UNKNOWN."""
         fields = {
             "source_license": self.source_license,
             "checkpoint_license": self.checkpoint_license,
-            "dataset_license": self.dataset_license,
         }
+        if self.reference_bank_required or self.reference_bank is not None:
+            fields["dataset_license"] = self.dataset_license
         return [name for name, value in fields.items() if value.strip().upper() == UNKNOWN_LICENSE]
 
 
@@ -134,8 +142,11 @@ def verify_xdecomposer_assets(
     verified_assets = [
         _verify_asset(manifest_path, "separator_checkpoint", manifest.separator_checkpoint),
         _verify_asset(manifest_path, "mae_checkpoint", manifest.mae_checkpoint),
-        _verify_asset(manifest_path, "reference_bank", manifest.reference_bank),
     ]
+    if manifest.reference_bank is not None:
+        verified_assets.append(
+            _verify_asset(manifest_path, "reference_bank", manifest.reference_bank)
+        )
     return XDecomposerAssetVerification(
         manifest_path=manifest_path,
         model_id=manifest.model_id,

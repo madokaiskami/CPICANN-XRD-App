@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Literal
 
@@ -14,6 +17,7 @@ from cpicann_xrd.schemas import StrictBaseModel
 
 XDECOMPOSER_BACKEND_ENV = "CPICANN_XDECOMPOSER_BACKEND"
 XDECOMPOSER_MANIFEST_ENV = "CPICANN_XDECOMPOSER_MANIFEST"
+XDECOMPOSER_SERVICE_URL_ENV = "CPICANN_XDECOMPOSER_SERVICE_URL"
 
 
 class BackendCapability(StrictBaseModel):
@@ -98,11 +102,7 @@ def evaluate_xdecomposer_capability(
             details={"model_id": result.model_id},
         )
     if backend_name == "remote":
-        return BackendCapability(
-            enabled=True,
-            available=False,
-            reason="service_unavailable",
-        )
+        return _remote_capability()
     return BackendCapability(
         enabled=True,
         available=False,
@@ -131,3 +131,34 @@ def _manifest_from_env() -> Path | None:
     if not value:
         return None
     return Path(value)
+
+
+def _remote_capability() -> BackendCapability:
+    base_url = os.environ.get(XDECOMPOSER_SERVICE_URL_ENV, "http://127.0.0.1:8100").rstrip("/")
+    try:
+        with urllib.request.urlopen(f"{base_url}/readyz", timeout=2.0) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, TimeoutError, json.JSONDecodeError, urllib.error.URLError) as exc:
+        return BackendCapability(
+            enabled=True,
+            available=False,
+            reason="service_unavailable",
+            details={"url": base_url, "reason": repr(exc)},
+        )
+    if payload.get("status") == "ready":
+        assets = payload.get("assets") if isinstance(payload.get("assets"), dict) else {}
+        return BackendCapability(
+            enabled=True,
+            available=True,
+            reason="service_ready",
+            details={
+                "url": base_url,
+                "model_id": str(assets.get("model_id", "")),
+            },
+        )
+    return BackendCapability(
+        enabled=True,
+        available=False,
+        reason="service_not_ready",
+        details={"url": base_url, "status": str(payload.get("status", ""))},
+    )

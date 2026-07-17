@@ -2,22 +2,49 @@
 
 ## Profiles
 
-CPU-only app:
+Web app only:
 
 ```bash
 docker compose up -d --build
 ```
 
-API profile:
+Web + API:
 
 ```bash
 docker compose --profile api up -d --build
 ```
 
-XDecomposer worker profile:
+Complete local/intranet deployment, including Web, API and XDecomposer worker:
 
 ```bash
-docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile xdecomposer up -d --build
+docker compose \
+  -f compose.yaml \
+  -f compose.xdecomposer.yaml \
+  --profile api \
+  --profile xdecomposer \
+  up -d --build
+```
+
+Check container state and endpoints:
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer ps
+curl -fsS http://127.0.0.1:8501/
+curl -fsS http://127.0.0.1:8000/healthz
+curl -fsS http://127.0.0.1:8000/capabilities
+curl -fsS http://127.0.0.1:8100/readyz
+```
+
+Follow logs:
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer logs -f app api xdecomposer-worker
+```
+
+Stop the complete deployment:
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer down
 ```
 
 GPU worker overlay:
@@ -51,6 +78,18 @@ Write run outputs to a persistent writable volume:
 
 Do not bake weights, `.env`, tokens or reference banks into images.
 
+For complete XDecomposer deployment, the host must provide:
+
+```text
+models/xdecomposer/manifest.yaml
+models/xdecomposer/checkpoints/xdecomposer/latest.pt
+models/xdecomposer/checkpoints/pretrain/checkpoint_latest.pt
+```
+
+Use `reference_bank_required: false` for decomposition-only mode. Reference-bank
+matching requires an additional reference bank path and license acceptance in
+the manifest.
+
 ## Cloud Notes
 
 - Put API and Web behind HTTPS reverse proxy such as Caddy or Nginx.
@@ -83,6 +122,9 @@ Restore:
 
 - `XDecomposer unavailable: xdecomposer_disabled`: enable only after assets and
   capability checks are ready.
+- `XDecomposer unavailable: service_unavailable`: check that
+  `xdecomposer-worker` is running and that the app/API containers can reach
+  `http://xdecomposer-worker:8100/readyz`.
 - `assets_invalid`: run `cpicann-xrd xdecomposer verify-assets --production`.
 - `NO_CANDIDATES_AFTER_FILTER`: element constraints removed every catalog
   candidate.

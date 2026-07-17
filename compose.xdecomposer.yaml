@@ -10,7 +10,8 @@ services:
     environment:
       XDECOMPOSER_MANIFEST_PATH: /app/models/xdecomposer/manifest.yaml
       XDECOMPOSER_EXPECTED_PYTHON: "3.10"
-      XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT: "false"
+      XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT: "true"
+      XDECOMPOSER_SOURCE_DIR: /srv/xdecomposer_service/vendor/XDecomposer
     volumes:
       - ./models/xdecomposer:/app/models/xdecomposer:ro
       - ./runs/xdecomposer:/app/runs/xdecomposer

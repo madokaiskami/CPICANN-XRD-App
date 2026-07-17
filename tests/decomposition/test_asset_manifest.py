@@ -81,6 +81,25 @@ def test_unknown_license_rejects_production_mode(tmp_path: Path) -> None:
     assert exc_info.value.details["fields"] == ["checkpoint_license"]
 
 
+def test_reference_bank_can_be_optional_for_decomposition_only(tmp_path: Path) -> None:
+    manifest_path = _write_manifest(tmp_path)
+    data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    data["reference_bank_required"] = False
+    del data["reference_bank"]
+    manifest_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    manifest = load_xdecomposer_manifest(manifest_path)
+    result = verify_xdecomposer_assets(manifest_path)
+
+    assert manifest.reference_bank_required is False
+    assert manifest.reference_bank is None
+    assert [asset.name for asset in result.assets] == [
+        "separator_checkpoint",
+        "mae_checkpoint",
+    ]
+    assert manifest.unconfirmed_license_fields() == []
+
+
 def test_example_manifest_parses_but_is_not_production_ready() -> None:
     manifest_path = Path("models/xdecomposer/manifest.example.yaml")
 

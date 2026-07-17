@@ -10,6 +10,7 @@ torch: "2.10.0"
 cuda: "12.8"
 xrd_length: 3500
 num_sources: 4
+reference_bank_required: true
 separator_checkpoint:
   path: checkpoints/xdecomposer/latest.pt
   sha256: "0000000000000000000000000000000000000000000000000000000000000000"

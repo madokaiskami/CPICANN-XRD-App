@@ -190,11 +190,36 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run cpicann-xrd decompose \
   --json
 ```
 
-真实 XDecomposer 推理需要授权 checkpoint、MAE checkpoint、reference bank、manifest SHA-256 和人工许可验收。
+真实 XDecomposer 分解需要授权 separator checkpoint、MAE checkpoint 和
+manifest SHA-256。仅做分解时可设置 `reference_bank_required: false`，此时
+reference bank 不参与推理；需要参考库匹配时才必须提供 reference bank 及其许可验收。
+
+本仓库随 `services/xdecomposer_service/vendor/XDecomposer` 打包了 worker
+所需的最小 XDecomposer MIT 源码副本，因此不再依赖开发机上的外部
+`XDecomposer` 源码目录。真实权重仍然只通过本地 `models/` 挂载提供，不提交到 Git。
+
+本地启动 XDecomposer worker：
+
+```bash
+CPICANN_XDECOMPOSER_BACKEND=remote \
+CPICANN_XDECOMPOSER_SERVICE_URL=http://127.0.0.1:8100 \
+PYTHONPATH=services/xdecomposer_service/src \
+.venv/bin/uvicorn xdecomposer_service.main:app --host 127.0.0.1 --port 8100
+```
+
+另开一个终端启动 Web：
+
+```bash
+CPICANN_XDECOMPOSER_BACKEND=remote \
+CPICANN_XDECOMPOSER_SERVICE_URL=http://127.0.0.1:8100 \
+UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run streamlit run src/cpicann_xrd/web/app.py
+```
 
 ## Docker 部署
 
 CPU 镜像不包含真实权重。`models/` 和 `runs/` 通过卷挂载保留在宿主机。
+
+只启动 Web app：
 
 ```bash
 docker compose up -d --build
@@ -212,7 +237,7 @@ http://localhost:8501
 http://<服务器内网IP>:8501
 ```
 
-启动 API profile：
+启动 Web + API：
 
 ```bash
 docker compose --profile api up -d --build
@@ -224,10 +249,48 @@ API 地址：
 http://localhost:8000
 ```
 
-XDecomposer worker profile：
+完整启动 Web + API + XDecomposer worker：
 
 ```bash
-docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile xdecomposer up -d --build
+docker compose \
+  -f compose.yaml \
+  -f compose.xdecomposer.yaml \
+  --profile api \
+  --profile xdecomposer \
+  up -d --build
+```
+
+该命令会启动 `app`、`api` 和 `xdecomposer-worker`。Compose 挂载宿主机
+`models/` 到容器内 `/app/models:ro`，并将 `models/xdecomposer` 挂载到
+worker 的 `/app/models/xdecomposer:ro`，因此真实 XDecomposer manifest 应放在：
+
+```text
+models/xdecomposer/manifest.yaml
+```
+
+Dockerfile 会把 vendored XDecomposer 源码复制进 worker 镜像，但不会复制真实
+checkpoint。
+
+部署后检查：
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer ps
+curl -fsS http://127.0.0.1:8501/
+curl -fsS http://127.0.0.1:8000/healthz
+curl -fsS http://127.0.0.1:8000/capabilities
+curl -fsS http://127.0.0.1:8100/readyz
+```
+
+查看日志：
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer logs -f app api xdecomposer-worker
+```
+
+停止完整部署：
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile api --profile xdecomposer down
 ```
 
 GPU worker overlay：
@@ -293,7 +356,8 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run python -m build
 ## 供应链与发布
 
 - CPU Dockerfile 位于 `docker/Dockerfile.cpu`，默认基础镜像使用 GHCR。
-- XDecomposer worker Dockerfile 位于 `docker/Dockerfile.xdecomposer`。
+- XDecomposer worker Dockerfile 位于 `docker/Dockerfile.xdecomposer`，并打包
+  `services/xdecomposer_service/vendor/XDecomposer` 下的最小上游源码副本。
 - GPU compose overlay 位于 `compose.gpu.yaml`。
 - Caddy/Nginx 示例位于 `deploy/`。
 - 运行时依赖清单位于 `docs/dependency-inventory.txt`，由 `uv export --frozen` 从 `uv.lock` 生成。

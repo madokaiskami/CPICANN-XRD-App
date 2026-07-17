@@ -9,10 +9,11 @@ artifacts from the upstream CPICANN project. This repository does not include
 pretrained weight binaries, tokens, or private download credentials.
 
 The XDecomposer integration added for the v0.2.0 release candidate includes
-schemas, manifests, stub services, optional entry points, an isolated worker
-skeleton, orchestration, job APIs and validation tooling. This repository does
-not include XDecomposer checkpoints, MAE-pretraining checkpoints, reference
-banks, dataset caches, tokens, or private download credentials.
+schemas, manifests, optional entry points, an isolated worker, orchestration,
+job APIs, validation tooling, and a minimal vendored copy of MIT-licensed
+upstream XDecomposer model source used by the worker. This repository does not
+include XDecomposer checkpoints, MAE-pretraining checkpoints, reference banks,
+dataset caches, tokens, or private download credentials.
 
 The committed catalog files are used to map CPICANN class indices to phase
 metadata for reproducible local inference. Redistribution of the upstream model

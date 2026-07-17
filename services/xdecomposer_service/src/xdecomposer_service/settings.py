@@ -6,15 +6,18 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+DEFAULT_BUNDLED_SOURCE_DIR = Path(__file__).resolve().parents[2] / "vendor" / "XDecomposer"
+
 
 @dataclass(frozen=True)
 class Settings:
     """Runtime settings for health and asset checks."""
 
     manifest_path: Path = Path("/app/models/xdecomposer/manifest.yaml")
-    upstream_source_dir: Path | None = None
+    upstream_source_dir: Path | None = DEFAULT_BUNDLED_SOURCE_DIR
     require_upstream_import: bool = False
     expected_python_minor: str = "3.10"
+    device: str = "auto"
 
 
 def load_settings() -> Settings:
@@ -27,9 +30,10 @@ def load_settings() -> Settings:
                 "/app/models/xdecomposer/manifest.yaml",
             )
         ),
-        upstream_source_dir=None if not source_dir else Path(source_dir),
+        upstream_source_dir=DEFAULT_BUNDLED_SOURCE_DIR if not source_dir else Path(source_dir),
         require_upstream_import=_env_bool("XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT", default=False),
         expected_python_minor=os.environ.get("XDECOMPOSER_EXPECTED_PYTHON", "3.10"),
+        device=os.environ.get("XDECOMPOSER_DEVICE", "auto"),
     )
 
 

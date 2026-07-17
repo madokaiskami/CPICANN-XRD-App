@@ -21,12 +21,16 @@ artifacts. This repository contains configuration and verification code only.
 Authorized users must place weights under `models/` locally and verify the
 bundle hash before real-model use.
 
-## XDecomposer Assets
+## XDecomposer Source And Assets
 
-The upstream XDecomposer source repository is MIT licensed, but checkpoint,
-MAE-pretrain and reference-bank redistribution rights are not established by
-this repository. The production asset gate rejects manifests with `UNKNOWN`
-license fields.
+The isolated worker packages a minimal reviewed copy of the MIT-licensed
+upstream XDecomposer model source at
+`services/xdecomposer_service/vendor/XDecomposer`. The upstream MIT license is
+preserved at `services/xdecomposer_service/vendor/XDecomposer/LICENSE`.
+
+Checkpoint, MAE-pretrain and reference-bank redistribution rights are not
+established by this repository. The production asset gate rejects manifests with
+`UNKNOWN` license fields.
 
 Tracked XDecomposer files are limited to:
 

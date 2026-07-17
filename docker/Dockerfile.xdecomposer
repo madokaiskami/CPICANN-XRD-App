@@ -5,14 +5,16 @@ FROM ${PYTHON_IMAGE} AS runtime
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PYTHONPATH=/srv/xdecomposer_service/src \
+    PYTHONPATH=/srv/xdecomposer_service/src:/srv/xdecomposer_service/vendor/XDecomposer \
     XDECOMPOSER_MANIFEST_PATH=/app/models/xdecomposer/manifest.yaml \
-    XDECOMPOSER_EXPECTED_PYTHON=3.10
+    XDECOMPOSER_EXPECTED_PYTHON=3.10 \
+    XDECOMPOSER_SOURCE_DIR=/srv/xdecomposer_service/vendor/XDecomposer
 
 WORKDIR /srv/xdecomposer_service
 
 COPY services/xdecomposer_service/pyproject.toml services/xdecomposer_service/requirements.lock ./
 COPY services/xdecomposer_service/src ./src
+COPY services/xdecomposer_service/vendor ./vendor
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.lock

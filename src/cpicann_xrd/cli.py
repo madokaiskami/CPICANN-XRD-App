@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -13,8 +14,12 @@ from cpicann_xrd.catalog.catalog import load_catalog_from_manifest
 from cpicann_xrd.core.spectrum_io import read_spectrum_file
 from cpicann_xrd.decomposition.assets import verify_xdecomposer_assets
 from cpicann_xrd.decomposition.capabilities import build_capabilities
+from cpicann_xrd.decomposition.client import XDecomposerHttpClient
 from cpicann_xrd.decomposition.exceptions import DecompositionError
-from cpicann_xrd.decomposition.orchestration import identify_decomposed_components
+from cpicann_xrd.decomposition.orchestration import (
+    DecompositionBackend,
+    identify_decomposed_components,
+)
 from cpicann_xrd.decomposition.schemas import XDecomposerRequest
 from cpicann_xrd.decomposition.stub_backend import StubDecompositionBackend
 from cpicann_xrd.exceptions import CpicannXrdError
@@ -430,7 +435,7 @@ def _run_cli_batch(
         raise typer.Exit(code=2) from exc
 
 
-def _xdecomposer_backend_for_cli(backend_name: str) -> StubDecompositionBackend:
+def _xdecomposer_backend_for_cli(backend_name: str) -> DecompositionBackend:
     capabilities = build_capabilities(
         cpicann_available=_runtime_available("cpicann"),
         xdecomposer_backend=backend_name,
@@ -439,6 +444,11 @@ def _xdecomposer_backend_for_cli(backend_name: str) -> StubDecompositionBackend:
         raise ValueError(f"XDecomposer unavailable: {capabilities.xdecomposer.reason}")
     if backend_name.strip().lower() in {"stub", "fake"}:
         return StubDecompositionBackend()
+    if backend_name.strip().lower() in {"remote", "service"}:
+        return XDecomposerHttpClient(
+            base_url=os.environ.get("CPICANN_XDECOMPOSER_SERVICE_URL", "http://127.0.0.1:8100"),
+            timeout_seconds=120.0,
+        )
     raise ValueError(f"Unsupported XDecomposer backend for CLI: {backend_name}")
 
 

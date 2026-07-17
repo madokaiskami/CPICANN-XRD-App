@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
+from types import ModuleType
 
 from xdecomposer_service.schemas import UpstreamStatus
 
@@ -26,8 +27,11 @@ def inspect_upstream(source_dir: Path | None) -> UpstreamStatus:
 
     for module_name in ("src.models.xdecomposer", "models.xdecomposer"):
         try:
-            importlib.import_module(module_name)
+            sys.modules.pop(module_name, None)
+            module = importlib.import_module(module_name)
         except Exception:
+            continue
+        if getattr(module, "__file__", None) is None or not hasattr(module, "XDecomposer"):
             continue
         return UpstreamStatus(
             source_dir=str(source_dir),
@@ -40,3 +44,11 @@ def inspect_upstream(source_dir: Path | None) -> UpstreamStatus:
         importable=False,
         message="xdecomposer_module_not_importable",
     )
+
+
+def import_upstream_module(source_dir: Path | None) -> ModuleType:
+    """Import the reviewed upstream XDecomposer module or raise RuntimeError."""
+    status = inspect_upstream(source_dir)
+    if not status.importable or status.module is None:
+        raise RuntimeError(status.message)
+    return importlib.import_module(status.module)

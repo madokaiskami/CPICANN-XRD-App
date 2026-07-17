@@ -52,7 +52,12 @@ def inspect_assets(manifest_path: Path) -> AssetStatus:
         )
 
     asset_errors = []
-    for name in ("separator_checkpoint", "mae_checkpoint", "reference_bank"):
+    reference_bank_required = bool(raw.get("reference_bank_required", True))
+    asset_names = ["separator_checkpoint", "mae_checkpoint"]
+    if reference_bank_required or raw.get("reference_bank") is not None:
+        asset_names.append("reference_bank")
+
+    for name in asset_names:
         error = _check_asset(manifest_path, name, raw.get(name))
         if error is not None:
             asset_errors.append(error)

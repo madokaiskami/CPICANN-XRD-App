@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from cpicann_xrd.decomposition.capabilities import (
     build_capabilities,
@@ -55,3 +59,39 @@ def test_remote_backend_reports_service_unavailable() -> None:
     assert capability.enabled is True
     assert capability.available is False
     assert capability.reason == "service_unavailable"
+
+
+def test_remote_backend_reports_ready_from_worker(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_urlopen(url: str, timeout: float) -> _FakeResponse:
+        assert url == "http://worker:8100/readyz"
+        assert timeout == 2.0
+        return _FakeResponse(
+            {
+                "status": "ready",
+                "assets": {"model_id": "xdecomposer-local"},
+            }
+        )
+
+    monkeypatch.setenv("CPICANN_XDECOMPOSER_SERVICE_URL", "http://worker:8100")
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    capability = evaluate_xdecomposer_capability(backend="remote")
+
+    assert capability.enabled is True
+    assert capability.available is True
+    assert capability.reason == "service_ready"
+    assert capability.details["model_id"] == "xdecomposer-local"
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self._payload = payload
+
+    def __enter__(self) -> _FakeResponse:
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return json.dumps(self._payload).encode("utf-8")

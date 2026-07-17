@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import os
 import shutil
 import tempfile
 from collections.abc import Mapping, Sequence
@@ -12,7 +13,11 @@ from typing import cast
 import streamlit as st
 
 from cpicann_xrd.catalog.catalog import PhaseCatalog
+from cpicann_xrd.core.spectrum_io import read_spectrum_file
 from cpicann_xrd.decomposition.capabilities import build_capabilities
+from cpicann_xrd.decomposition.client import XDecomposerHttpClient
+from cpicann_xrd.decomposition.exceptions import DecompositionError
+from cpicann_xrd.decomposition.schemas import XDecomposerRequest, XDecomposerResult
 from cpicann_xrd.exceptions import CpicannXrdError
 from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import FilterSpec
@@ -53,6 +58,12 @@ def main() -> None:
         include_must = st.multiselect("必须包含元素", elements, default=[])
         allowed_elements = st.multiselect("允许元素范围", elements, default=[])
         top_k = st.number_input("Top-K", min_value=1, max_value=50, value=5, step=1)
+        max_sources = st.number_input(
+            "XDecomposer components", min_value=1, max_value=16, value=4, step=1
+        )
+        activity_threshold = st.slider(
+            "Activity threshold", min_value=0.0, max_value=1.0, value=0.5
+        )
 
     uploaded_files = st.file_uploader(
         "上传谱图文件",
@@ -60,12 +71,27 @@ def main() -> None:
         help="支持 .txt、.csv、.xy；其他文件会记录为不支持输入。",
     )
     st.info("样品名称来自文件名；模型预测物相是单相候选排序。过滤后条件置信度不是实际多相含量。")
-    if mode_label != "单相物相识别":
-        st.warning("多相模式需要 XDecomposer capability ready；Web 端不会重复实现核心编排逻辑。")
-        st.stop()
-
     if not uploaded_files:
         st.stop()
+
+    if mode_label != "单相物相识别":
+        if st.button("运行多相分解", type="primary"):
+            try:
+                results = _run_decomposition_files(
+                    uploaded_files=cast("list[UploadedFileLike]", list(uploaded_files)),
+                    max_sources=int(max_sources),
+                    activity_threshold=float(activity_threshold),
+                )
+            except (DecompositionError, CpicannXrdError, ValueError) as exc:
+                st.error(str(exc))
+                return
+            st.session_state["web_decomposition_results"] = results
+            _render_decomposition_results(results)
+        elif "web_decomposition_results" in st.session_state:
+            _render_decomposition_results(
+                cast("list[XDecomposerResult]", st.session_state["web_decomposition_results"])
+            )
+        return
 
     if st.button("运行识别", type="primary"):
         try:
@@ -138,6 +164,47 @@ def _run_uploaded_files(
     return stored_result
 
 
+def _run_decomposition_files(
+    *,
+    uploaded_files: list[UploadedFileLike],
+    max_sources: int,
+    activity_threshold: float,
+) -> list[XDecomposerResult]:
+    previous_temp_dir = st.session_state.get("web_temp_dir")
+    if previous_temp_dir:
+        shutil.rmtree(previous_temp_dir, ignore_errors=True)
+    temp_root = Path(tempfile.mkdtemp(prefix="cpicann-web-xdecomposer-"))
+    atexit.register(shutil.rmtree, temp_root, ignore_errors=True)
+    st.session_state["web_temp_dir"] = str(temp_root)
+    prepared = stage_uploaded_files(uploaded_files, input_dir=temp_root / "inputs")
+    st.session_state["upload_warnings"] = prepared.warnings
+    client = XDecomposerHttpClient(
+        base_url=os.environ.get("CPICANN_XDECOMPOSER_SERVICE_URL", "http://127.0.0.1:8100"),
+        timeout_seconds=float(os.environ.get("CPICANN_XDECOMPOSER_TIMEOUT_SECONDS", "120")),
+    )
+    results: list[XDecomposerResult] = []
+    for input_path in prepared.input_paths:
+        read_result = read_spectrum_file(input_path)
+        if read_result.spectrum is None:
+            message = "; ".join(diagnostic.message for diagnostic in read_result.diagnostics)
+            raise ValueError(message or f"failed to read {input_path.name}")
+        spectrum = read_result.spectrum
+        results.append(
+            client.decompose(
+                XDecomposerRequest(
+                    sample_id=spectrum.sample_id,
+                    source_filename=spectrum.source_filename,
+                    two_theta=spectrum.two_theta,
+                    intensity=spectrum.intensity,
+                    max_sources=max_sources,
+                    activity_threshold=activity_threshold,
+                    return_component_patterns=False,
+                )
+            )
+        )
+    return results
+
+
 def _snapshot_run_result(result: BatchRunResult) -> BatchRunResult:
     return BatchRunResult(
         run_id=result.run_id,
@@ -204,6 +271,31 @@ def _render_result(result: BatchRunResult) -> None:
         "本结果为 CPICANN 单相分类模型在当前元素约束条件下生成的候选物相排序。"
         "过滤后置信度为候选集合内的相对条件分数，不代表实际物相含量。"
     )
+
+
+def _render_decomposition_results(results: list[XDecomposerResult]) -> None:
+    st.subheader("XDecomposer 多相分解")
+    for warning in st.session_state.get("upload_warnings", []):
+        st.warning(warning)
+    for result in results:
+        st.markdown(f"### {result.sample_id}")
+        st.caption(
+            "Component 是 XDecomposer 分解输出，不等同于已确认物相；"
+            "estimated weight 不是 Rietveld 定量相含量。"
+        )
+        st.metric("Reconstruction error", f"{result.reconstruction_error:.6g}")
+        rows = [
+            {
+                "component": component.component_index,
+                "slot": component.original_slot_index,
+                "active": component.is_active,
+                "activity_probability": component.active_probability,
+                "estimated_weight": component.estimated_weight,
+                "pattern_sha256": component.pattern_sha256[:12],
+            }
+            for component in result.components
+        ]
+        st.markdown(_markdown_table(rows))
 
 
 def _download_file(label: str, path: Path, mime: str) -> None:
