@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cpicann-xrd"
-version = "0.1.0rc1"
+version = "0.2.0rc1"
 description = "Reproducible XRD phase-identification application around CPICANN."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -78,6 +78,7 @@ packages = ["src/cpicann_xrd"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["services/xdecomposer_service/vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -93,6 +94,8 @@ addopts = "-ra"
 testpaths = ["tests"]
 markers = [
     "model: requires configured real CPICANN model weights",
+    "xdecomposer_model: requires configured real XDecomposer assets",
+    "xdecomposer_cpicann_model: requires configured real XDecomposer and CPICANN assets",
 ]
 
 [tool.coverage.run]

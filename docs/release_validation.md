@@ -58,7 +58,7 @@ docker build -f docker/Dockerfile.cpu -t cpicann-xrd-app:rc1 .
 docker run --rm \
   -v "$PWD/models:/app/models:ro" \
   -v "$PWD/examples:/app/examples:ro" \
-  -v "/home/luojun/Codes/CPICANN/cpicann-container-test:/app/runs" \
+  -v "<host-output-dir>:/app/runs" \
   cpicann-xrd-app:rc1 \
   cpicann-xrd batch \
   --backend cpicann \

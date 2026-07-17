@@ -1,0 +1,37 @@
+services:
+  xdecomposer-worker:
+    profiles: ["xdecomposer"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.xdecomposer
+    image: xdecomposer-service:local
+    ports:
+      - "8100:8100"
+    environment:
+      XDECOMPOSER_MANIFEST_PATH: /app/models/xdecomposer/manifest.yaml
+      XDECOMPOSER_EXPECTED_PYTHON: "3.10"
+      XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT: "true"
+      XDECOMPOSER_SOURCE_DIR: /srv/xdecomposer_service/vendor/XDecomposer
+    volumes:
+      - ./models/xdecomposer:/app/models/xdecomposer:ro
+      - ./runs/xdecomposer:/app/runs/xdecomposer
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/healthz', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

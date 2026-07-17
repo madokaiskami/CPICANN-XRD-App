@@ -23,6 +23,9 @@ jobs:
       - name: Build CPU image
         run: docker build -f docker/Dockerfile.cpu -t cpicann-xrd-app:test .
 
+      - name: Build XDecomposer worker image
+        run: docker build -f docker/Dockerfile.xdecomposer -t xdecomposer-service:test .
+
       - name: Check CLI version
         run: docker run --rm cpicann-xrd-app:test cpicann-xrd --version
 
@@ -31,6 +34,12 @@ jobs:
 
       - name: Validate compose file
         run: docker compose config
+
+      - name: Validate XDecomposer compose overlay
+        run: docker compose -f compose.yaml -f compose.xdecomposer.yaml config
+
+      - name: Validate XDecomposer GPU compose overlay
+        run: docker compose -f compose.yaml -f compose.xdecomposer.yaml -f compose.gpu.yaml --profile xdecomposer-gpu config
 
   publish:
     runs-on: ubuntu-latest
@@ -61,6 +70,7 @@ jobs:
             type=sha,prefix=sha-
 
       - name: Build and push CPU image
+        id: build-cpu
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -68,3 +78,20 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push XDecomposer worker image
+        id: build-xdecomposer
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.xdecomposer
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-xdecomposer:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}-xdecomposer:sha-${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Record image digests
+        run: |
+          echo "CPICANN image digest: ${{ steps.build-cpu.outputs.digest }}"
+          echo "XDecomposer image digest: ${{ steps.build-xdecomposer.outputs.digest }}"

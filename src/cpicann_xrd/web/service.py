@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 from cpicann_xrd.catalog.elements import VALID_ELEMENT_SYMBOLS
+from cpicann_xrd.decomposition.capabilities import Capabilities
 
 MAX_UPLOAD_FILES = 20
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+WebMode = Literal["single_phase", "decompose", "decompose_and_identify"]
 
 
 class UploadedFileLike(Protocol):
@@ -30,9 +32,44 @@ class PreparedWebInputs:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class WebModeOption:
+    """One mode option exposed by the Streamlit UI."""
+
+    key: WebMode
+    label: str
+    enabled: bool
+    reason: str | None = None
+
+
 def available_elements() -> list[str]:
     """Return user-selectable real element symbols."""
     return sorted(element for element in VALID_ELEMENT_SYMBOLS if element != "X")
+
+
+def web_mode_options(capabilities: Capabilities) -> list[WebModeOption]:
+    """Return mode options without duplicating decomposition business logic."""
+    xdecomposer_ready = capabilities.xdecomposer.available
+    reason = None if xdecomposer_ready else capabilities.xdecomposer.reason
+    return [
+        WebModeOption(
+            key="single_phase",
+            label="单相物相识别",
+            enabled=True,
+        ),
+        WebModeOption(
+            key="decompose",
+            label="多相谱图分解",
+            enabled=xdecomposer_ready,
+            reason=reason,
+        ),
+        WebModeOption(
+            key="decompose_and_identify",
+            label="多相分解并识别",
+            enabled=xdecomposer_ready,
+            reason=reason,
+        ),
+    ]
 
 
 def stage_uploaded_files(

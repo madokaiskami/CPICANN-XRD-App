@@ -1,0 +1,23 @@
+schema_version: "1.0"
+model_id: xdecomposer-mp20-example
+upstream_repo: https://github.com/Licht0812/XDecomposer
+upstream_commit: 48c4efe3681256cd16d3b8d2f56d665cf58fd129
+source_license: MIT
+checkpoint_license: UNKNOWN
+dataset_license: UNKNOWN
+python: "3.10"
+torch: "2.10.0"
+cuda: "12.8"
+xrd_length: 3500
+num_sources: 4
+reference_bank_required: true
+separator_checkpoint:
+  path: checkpoints/xdecomposer/latest.pt
+  sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+mae_checkpoint:
+  path: checkpoints/pretrain/checkpoint_latest.pt
+  sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+reference_bank:
+  path: reference_bank.pt
+  sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+notes: "Example only. Not valid for real inference or production startup."

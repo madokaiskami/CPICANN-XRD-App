@@ -157,4 +157,4 @@
 - 已扩展 `tests/integration/test_real_model.py`，覆盖 CPU 重复运行稳定性、真实 golden 对比，以及 service/Web helper、CLI、API 三路过滤后结果一致性。
 - 已新增 `NOTICE`、`CITATION.cff`、`SECURITY.md`、`docs/known_limitations.md` 和 `docs/release_validation.md`，明确权重不再分发、公开镜像不含权重、置信度不是含量。
 - 本机 `uv sync --frozen --all-extras`、格式检查、lint、mypy、非模型测试、真实模型测试、包构建、`doctor --backend cpicann`、真实 CLI batch、RC Docker build 和容器内真实 batch 均已通过。
-- Docker 真实 batch 使用非 root 容器用户；宿主挂载输出目录必须对容器用户可写。本机验收使用 `/home/luojun/Codes/CPICANN/cpicann-container-test` 作为临时挂载输出目录。
+- Docker 真实 batch 使用非 root 容器用户；宿主挂载输出目录必须对容器用户可写。本机验收使用仓库外的临时挂载输出目录。

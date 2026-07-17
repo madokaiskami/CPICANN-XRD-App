@@ -10,7 +10,7 @@ Phase 1 audited these upstream artifacts:
 
 | Artifact | URL | Revision / version | Evidence |
 |---|---|---:|---|
-| GitHub project | `https://github.com/WPEM/CPICANN` | `01e915697f544e5a4fcd0f03f76da0e38ee00ece` | README and MIT `LICENSE` in local fork `/home/luojun/Codes/CPICANN` |
+| GitHub project | `https://github.com/WPEM/CPICANN` | `01e915697f544e5a4fcd0f03f76da0e38ee00ece` | README and MIT `LICENSE` from a local upstream checkout |
 | User fork | `git@github.com:madokaiskami/CPICANN.git` | `01e915697f544e5a4fcd0f03f76da0e38ee00ece` on branch `packaging` | local checkout remote metadata |
 | HF source mirror | `https://huggingface.co/AI4Cryst/CPICANN` | `3dbfaeab51d272e013d211c7f957760b46ab41cc` | `src/model/CPICANN.py`, `src/data_format.py`, `src/annotation/anno_struc.csv` |
 | HF pretrained models | `https://huggingface.co/caobin/pretrainCPICANN` | `85b7e2ce9060286c84efc459cfde875ad5ca30ec` | Git LFS pointers and README |
