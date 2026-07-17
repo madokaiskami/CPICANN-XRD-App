@@ -12,12 +12,18 @@ from typing import cast
 import streamlit as st
 
 from cpicann_xrd.catalog.catalog import PhaseCatalog
+from cpicann_xrd.decomposition.capabilities import build_capabilities
 from cpicann_xrd.exceptions import CpicannXrdError
 from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import FilterSpec
 from cpicann_xrd.services.batch_runner import BatchRunResult, run_batch
 from cpicann_xrd.services.runtime import build_runtime
-from cpicann_xrd.web.service import UploadedFileLike, available_elements, stage_uploaded_files
+from cpicann_xrd.web.service import (
+    UploadedFileLike,
+    available_elements,
+    stage_uploaded_files,
+    web_mode_options,
+)
 
 WEB_BACKEND_NAME = "cpicann"
 
@@ -31,6 +37,17 @@ def main() -> None:
     with st.sidebar:
         backend_name = WEB_BACKEND_NAME
         model_status = _model_status(backend_name)
+        capabilities = build_capabilities(cpicann_available=_backend_available(backend_name))
+        mode_options = web_mode_options(capabilities)
+        enabled_mode_options = [option for option in mode_options if option.enabled]
+        mode_label = st.radio(
+            "模式",
+            [option.label for option in enabled_mode_options],
+            index=0,
+        )
+        for option in mode_options:
+            if not option.enabled:
+                st.caption(f"{option.label}：{option.reason}")
         st.write(f"模型状态：{model_status}")
         elements = available_elements()
         include_must = st.multiselect("必须包含元素", elements, default=[])
@@ -43,6 +60,9 @@ def main() -> None:
         help="支持 .txt、.csv、.xy；其他文件会记录为不支持输入。",
     )
     st.info("样品名称来自文件名；模型预测物相是单相候选排序。过滤后条件置信度不是实际多相含量。")
+    if mode_label != "单相物相识别":
+        st.warning("多相模式需要 XDecomposer capability ready；Web 端不会重复实现核心编排逻辑。")
+        st.stop()
 
     if not uploaded_files:
         st.stop()
@@ -75,6 +95,14 @@ def _model_status(backend_name: str) -> str:
     except Exception:
         return "真实模型未就绪"
     return f"{backend.model_info.model_id} 可用"
+
+
+def _backend_available(backend_name: str) -> bool:
+    try:
+        _cached_runtime(backend_name)
+    except Exception:
+        return False
+    return True
 
 
 def _run_uploaded_files(

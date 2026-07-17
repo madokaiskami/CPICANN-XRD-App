@@ -17,12 +17,21 @@ from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 from cpicann_xrd.api.service import api_run_root, resolve_run_dir, stage_api_uploads
-from cpicann_xrd.catalog.catalog import PhaseCatalog
+from cpicann_xrd.catalog.catalog import PhaseCatalog, load_catalog_from_manifest
+from cpicann_xrd.core.spectrum_io import read_spectrum_file
+from cpicann_xrd.decomposition.capabilities import Capabilities, build_capabilities
+from cpicann_xrd.decomposition.exceptions import DecompositionError
+from cpicann_xrd.decomposition.orchestration import (
+    MultiphaseIdentificationResult,
+    identify_decomposed_components,
+)
+from cpicann_xrd.decomposition.schemas import XDecomposerRequest, XDecomposerResult
+from cpicann_xrd.decomposition.stub_backend import StubDecompositionBackend
 from cpicann_xrd.exceptions import CpicannXrdError
 from cpicann_xrd.model.protocol import InferenceBackend
 from cpicann_xrd.schemas import DiagnosticRecord, FilterSpec, ModelInfo, SamplePrediction
 from cpicann_xrd.services.batch_runner import BatchRunResult, run_batch
-from cpicann_xrd.services.runtime import build_runtime
+from cpicann_xrd.services.runtime import DEFAULT_CATALOG_MANIFEST, build_runtime
 from cpicann_xrd.version import __version__
 
 API_TIMEOUT_SECONDS = 120
@@ -119,6 +128,17 @@ async def cpicann_error_handler(request: Request, exc: CpicannXrdError) -> JSONR
     )
 
 
+@app.exception_handler(DecompositionError)
+async def decomposition_error_handler(request: Request, exc: DecompositionError) -> JSONResponse:
+    return _error_response(
+        request,
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code=exc.code.value,
+        message=exc.message,
+        details=exc.details,
+    )
+
+
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
     message = str(exc)
@@ -173,6 +193,12 @@ def readyz(request: Request) -> ReadyResponse:
             detail="no backend available",
         )
     return ReadyResponse(status="ok", request_id=_request_id(request), backends=backends)
+
+
+@app.get("/capabilities", response_model=Capabilities)
+def capabilities() -> Capabilities:
+    """Return CPICANN and optional XDecomposer capability state."""
+    return build_capabilities(cpicann_available=_backend_available("cpicann"))
 
 
 @app.get("/v1/models", response_model=ModelsResponse)
@@ -243,6 +269,75 @@ async def batch(
     )
 
 
+@app.post("/v1/decompose", response_model=XDecomposerResult)
+async def decompose(
+    file: Annotated[UploadFile, File(description="Single .txt/.csv/.xy spectrum file.")],
+    xdecomposer_backend: Annotated[
+        str,
+        Form(description="XDecomposer backend: disabled or stub."),
+    ] = "disabled",
+    max_sources: Annotated[int, Form(ge=1, le=16)] = 4,
+    activity_threshold: Annotated[float, Form(ge=0.0, le=1.0)] = 0.5,
+    reference_top_k: Annotated[int, Form(ge=0, le=100)] = 5,
+    return_component_patterns: Annotated[bool, Form()] = False,
+) -> XDecomposerResult:
+    """Explicit optional decomposition endpoint. Disabled unless a backend is selected."""
+    backend = _decomposition_backend_or_503(xdecomposer_backend)
+    spectrum = await _read_one_upload(file)
+    return backend.decompose(
+        XDecomposerRequest(
+            sample_id=spectrum.sample_id,
+            source_filename=spectrum.source_filename,
+            two_theta=spectrum.two_theta,
+            intensity=spectrum.intensity,
+            max_sources=max_sources,
+            activity_threshold=activity_threshold,
+            reference_top_k=reference_top_k,
+            return_component_patterns=return_component_patterns,
+        )
+    )
+
+
+@app.post("/v1/decompose-and-identify", response_model=MultiphaseIdentificationResult)
+async def decompose_and_identify(
+    file: Annotated[UploadFile, File(description="Single .txt/.csv/.xy spectrum file.")],
+    xdecomposer_backend: Annotated[
+        str,
+        Form(description="XDecomposer backend: disabled or stub."),
+    ] = "disabled",
+    backend: Annotated[str, Form(description="CPICANN backend: fake or cpicann.")] = "fake",
+    include_must: Annotated[list[str] | None, Form()] = None,
+    allowed_elements: Annotated[list[str] | None, Form()] = None,
+    max_sources: Annotated[int, Form(ge=1, le=16)] = 4,
+    activity_threshold: Annotated[float, Form(ge=0.0, le=1.0)] = 0.5,
+    top_k: Annotated[int, Form(ge=1, le=50)] = 5,
+) -> MultiphaseIdentificationResult:
+    """Explicit optional decomposition plus CPICANN ranking endpoint."""
+    decomposition_backend = _decomposition_backend_or_503(xdecomposer_backend)
+    spectrum = await _read_one_upload(file)
+    phase_backend, catalog = _cached_runtime(backend)
+    _, catalog_manifest = load_catalog_from_manifest(DEFAULT_CATALOG_MANIFEST)
+    return identify_decomposed_components(
+        request=XDecomposerRequest(
+            sample_id=spectrum.sample_id,
+            source_filename=spectrum.source_filename,
+            two_theta=spectrum.two_theta,
+            intensity=spectrum.intensity,
+            max_sources=max_sources,
+            activity_threshold=activity_threshold,
+        ),
+        decomposition_backend=decomposition_backend,
+        phase_backend=phase_backend,
+        catalog=catalog,
+        catalog_manifest=catalog_manifest,
+        top_k=top_k,
+        filter_spec=FilterSpec(
+            include_must=frozenset(include_must or []),
+            allowed_elements=None if allowed_elements is None else frozenset(allowed_elements),
+        ),
+    )
+
+
 @app.get("/v1/runs/{run_id}", response_model=RunLookupResponse)
 def get_run(request: Request, run_id: str) -> RunLookupResponse:
     """Return metadata for one API-created run without exposing filesystem paths."""
@@ -304,6 +399,34 @@ def _backend_available(backend_name: str) -> bool:
     except Exception:
         return False
     return True
+
+
+def _decomposition_backend_or_503(backend_name: str) -> StubDecompositionBackend:
+    capabilities = build_capabilities(
+        cpicann_available=_backend_available("cpicann"),
+        xdecomposer_backend=backend_name,
+    )
+    if not capabilities.xdecomposer.available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"XDecomposer unavailable: {capabilities.xdecomposer.reason}",
+        )
+    if backend_name.strip().lower() in {"stub", "fake"}:
+        return StubDecompositionBackend()
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"XDecomposer unavailable: {capabilities.xdecomposer.reason}",
+    )
+
+
+async def _read_one_upload(file: UploadFile) -> Any:
+    with tempfile.TemporaryDirectory(prefix="cpicann-api-decomposition-") as temp_dir:
+        prepared = await stage_api_uploads([file], input_dir=Path(temp_dir) / "inputs")
+        read_result = read_spectrum_file(prepared.input_paths[0])
+    if read_result.spectrum is None:
+        message = "; ".join(diagnostic.message for diagnostic in read_result.diagnostics)
+        raise ValueError(message or "failed to read spectrum")
+    return read_result.spectrum
 
 
 def _run_response(request: Request, result: BatchRunResult) -> RunResponse:
