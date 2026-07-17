@@ -16,6 +16,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.responses import Response
 
+from cpicann_xrd.api.jobs import (
+    InMemoryJobStore,
+    JobCreateRequest,
+    JobExecutionContext,
+    JobResultEnvelope,
+    JobSnapshot,
+    JobState,
+)
 from cpicann_xrd.api.service import api_run_root, resolve_run_dir, stage_api_uploads
 from cpicann_xrd.catalog.catalog import PhaseCatalog, load_catalog_from_manifest
 from cpicann_xrd.core.spectrum_io import read_spectrum_file
@@ -338,6 +346,72 @@ async def decompose_and_identify(
     )
 
 
+@app.post("/v1/jobs", response_model=JobSnapshot)
+def create_job(request: Request, payload: JobCreateRequest) -> JobSnapshot:
+    """Submit an asynchronous API job."""
+    return _job_store().submit(
+        mode=payload.mode,
+        request_id=_request_id(request),
+        runner=_capabilities_job_runner,
+        timeout_seconds=payload.timeout_seconds,
+    )
+
+
+@app.get("/v1/jobs/{job_id}", response_model=JobSnapshot)
+def get_job(job_id: str) -> JobSnapshot:
+    """Return asynchronous job state."""
+    try:
+        return _job_store().get(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found") from exc
+
+
+@app.get("/v1/jobs/{job_id}/result", response_model=JobResultEnvelope)
+def get_job_result(job_id: str) -> JobResultEnvelope:
+    """Return asynchronous job result JSON."""
+    try:
+        return _job_store().result(job_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="job result not found",
+        ) from exc
+
+
+@app.get("/v1/jobs/{job_id}/download")
+def download_job(job_id: str) -> FileResponse:
+    """Download isolated asynchronous job outputs."""
+    try:
+        zip_path = _job_store().download_path(job_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="job download not found",
+        ) from exc
+    return FileResponse(zip_path, media_type="application/zip", filename=f"{job_id}.zip")
+
+
+@app.post("/v1/jobs/{job_id}/cancel", response_model=JobSnapshot)
+def cancel_job(job_id: str) -> JobSnapshot:
+    """Cancel a queued or running asynchronous job."""
+    try:
+        return _job_store().cancel(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found") from exc
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    """Return Prometheus-style job status counts."""
+    counts = _job_store().metrics()
+    lines = [
+        "# HELP cpicann_xrd_jobs Number of API jobs by status.",
+        "# TYPE cpicann_xrd_jobs gauge",
+    ]
+    lines.extend(f'cpicann_xrd_jobs{{status="{key}"}} {value}' for key, value in counts.items())
+    return Response("\n".join(lines) + "\n", media_type="text/plain")
+
+
 @app.get("/v1/runs/{run_id}", response_model=RunLookupResponse)
 def get_run(request: Request, run_id: str) -> RunLookupResponse:
     """Return metadata for one API-created run without exposing filesystem paths."""
@@ -399,6 +473,21 @@ def _backend_available(backend_name: str) -> bool:
     except Exception:
         return False
     return True
+
+
+@lru_cache(maxsize=1)
+def _job_store() -> InMemoryJobStore:
+    return InMemoryJobStore(root=api_run_root() / "jobs", max_concurrent=1)
+
+
+def _capabilities_job_runner(context: JobExecutionContext) -> dict[str, Any]:
+    context.set_status(JobState.REPORTING)
+    payload = capabilities().model_dump(mode="json")
+    (context.job_dir / "capabilities.json").write_text(
+        json.dumps(payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return {"capabilities": payload}
 
 
 def _decomposition_backend_or_503(backend_name: str) -> StubDecompositionBackend:
