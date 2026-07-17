@@ -1,0 +1,32 @@
+ARG PYTHON_IMAGE=python:3.10-slim
+
+FROM ${PYTHON_IMAGE} AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/srv/xdecomposer_service/src \
+    XDECOMPOSER_MANIFEST_PATH=/app/models/xdecomposer/manifest.yaml \
+    XDECOMPOSER_EXPECTED_PYTHON=3.10
+
+WORKDIR /srv/xdecomposer_service
+
+COPY services/xdecomposer_service/pyproject.toml services/xdecomposer_service/requirements.lock ./
+COPY services/xdecomposer_service/src ./src
+
+RUN python -m pip install --upgrade pip \
+    && python -m pip install -r requirements.lock
+
+RUN groupadd --system --gid 10002 xdecomposer \
+    && useradd --system --uid 10002 --gid xdecomposer --home-dir /srv/xdecomposer_service --shell /usr/sbin/nologin xdecomposer \
+    && mkdir -p /app/models/xdecomposer /app/runs/xdecomposer \
+    && chown -R xdecomposer:xdecomposer /srv/xdecomposer_service /app/runs/xdecomposer
+
+USER xdecomposer
+
+EXPOSE 8100
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -m xdecomposer_service.check_environment >/dev/null || exit 1
+
+CMD ["uvicorn", "xdecomposer_service.main:app", "--host", "0.0.0.0", "--port", "8100"]
