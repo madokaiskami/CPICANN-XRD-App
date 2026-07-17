@@ -94,6 +94,7 @@ testpaths = ["tests"]
 markers = [
     "model: requires configured real CPICANN model weights",
     "xdecomposer_model: requires configured real XDecomposer assets",
+    "xdecomposer_cpicann_model: requires configured real XDecomposer and CPICANN assets",
 ]
 
 [tool.coverage.run]
