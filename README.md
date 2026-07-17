@@ -230,6 +230,19 @@ XDecomposer worker profile：
 docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile xdecomposer up -d --build
 ```
 
+GPU worker overlay：
+
+```bash
+docker compose \
+  -f compose.yaml \
+  -f compose.xdecomposer.yaml \
+  -f compose.gpu.yaml \
+  --profile xdecomposer-gpu \
+  up -d --build
+```
+
+HTTPS reverse-proxy examples are in `deploy/Caddyfile` and `deploy/nginx.conf`.
+
 容器内真实模型 CLI 示例：
 
 ```bash
@@ -281,6 +294,8 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run python -m build
 
 - CPU Dockerfile 位于 `docker/Dockerfile.cpu`，默认基础镜像使用 GHCR。
 - XDecomposer worker Dockerfile 位于 `docker/Dockerfile.xdecomposer`。
+- GPU compose overlay 位于 `compose.gpu.yaml`。
+- Caddy/Nginx 示例位于 `deploy/`。
 - 运行时依赖清单位于 `docs/dependency-inventory.txt`，由 `uv export --frozen` 从 `uv.lock` 生成。
 - 普通 CI 不访问真实权重 secret；真实模型 smoke test 在独立 workflow 中运行。
 - 发布镜像不包含 `models/`、`runs/`、`.env` 或 checkpoint 文件。

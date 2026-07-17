@@ -20,6 +20,20 @@ XDecomposer worker profile:
 docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile xdecomposer up -d --build
 ```
 
+GPU worker overlay:
+
+```bash
+docker compose \
+  -f compose.yaml \
+  -f compose.xdecomposer.yaml \
+  -f compose.gpu.yaml \
+  --profile xdecomposer-gpu \
+  up -d --build
+```
+
+`compose.gpu.yaml` requests one NVIDIA GPU for the XDecomposer worker. Use it
+only after the host driver and container runtime have been validated.
+
 ## Asset Mounts
 
 Mount model assets read-only:
@@ -40,6 +54,8 @@ Do not bake weights, `.env`, tokens or reference banks into images.
 ## Cloud Notes
 
 - Put API and Web behind HTTPS reverse proxy such as Caddy or Nginx.
+- Example reverse-proxy configs are provided in `deploy/Caddyfile` and
+  `deploy/nginx.conf`; replace `cpicann.example.invalid` before use.
 - Restrict access to trusted internal users unless authentication is added.
 - Keep secrets in environment or platform secret stores.
 - Confirm CUDA driver, container runtime and GPU visibility before enabling the

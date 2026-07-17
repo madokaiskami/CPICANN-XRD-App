@@ -1,0 +1,13 @@
+{
+  email ops@example.invalid
+}
+
+cpicann.example.invalid {
+  encode zstd gzip
+
+  reverse_proxy /api/* api:8000
+  reverse_proxy /healthz api:8000
+  reverse_proxy /readyz api:8000
+  reverse_proxy /capabilities api:8000
+  reverse_proxy app:8501
+}

@@ -10,6 +10,9 @@ from scripts.release_preflight import run_preflight
 def test_release_documents_exist_and_mark_xdecomposer_experimental() -> None:
     required_paths = [
         Path("CHANGELOG.md"),
+        Path("compose.gpu.yaml"),
+        Path("deploy/Caddyfile"),
+        Path("deploy/nginx.conf"),
         Path("docs/release_notes_v0.2.0.md"),
         Path("docs/deployment_runbook.md"),
         Path("docs/rollback.md"),
@@ -45,6 +48,7 @@ def test_docker_and_release_workflows_cover_two_images_and_digests() -> None:
     assert "docker/Dockerfile.cpu" in docker
     assert "docker/Dockerfile.xdecomposer" in docker
     assert "compose.xdecomposer.yaml" in docker
+    assert Path("compose.gpu.yaml").is_file()
     assert "docker/Dockerfile.cpu" in release
     assert "docker/Dockerfile.xdecomposer" in release
     assert "IMAGE_DIGESTS" in release

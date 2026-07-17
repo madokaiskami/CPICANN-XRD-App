@@ -38,6 +38,9 @@ jobs:
       - name: Validate XDecomposer compose overlay
         run: docker compose -f compose.yaml -f compose.xdecomposer.yaml config
 
+      - name: Validate XDecomposer GPU compose overlay
+        run: docker compose -f compose.yaml -f compose.xdecomposer.yaml -f compose.gpu.yaml --profile xdecomposer-gpu config
+
   publish:
     runs-on: ubuntu-latest
     needs: build-smoke

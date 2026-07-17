@@ -19,6 +19,13 @@ Release workflows build:
 - CPICANN app image from `docker/Dockerfile.cpu`;
 - XDecomposer worker image from `docker/Dockerfile.xdecomposer`.
 
+Deployment examples include:
+
+- CPU/API compose profiles in `compose.yaml`;
+- XDecomposer worker profile in `compose.xdecomposer.yaml`;
+- optional GPU reservation overlay in `compose.gpu.yaml`;
+- Caddy and Nginx reverse-proxy examples in `deploy/`.
+
 Immutable tags and digests must be copied from the CI release logs before
 production deployment. Do not deploy an image identified only by `latest`.
 
