@@ -1,1 +1,1 @@
-"""XRD decomposition contracts and asset validation."""
+"""XRD decomposition contracts, preprocessing and asset validation."""
