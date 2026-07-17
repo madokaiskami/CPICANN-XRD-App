@@ -111,9 +111,9 @@ def evaluate_xdecomposer_capability(
     )
 
 
-def _normalize_backend(value: str | None) -> Literal[
-    "disabled", "stub", "assets", "remote", "unsupported"
-]:
+def _normalize_backend(
+    value: str | None,
+) -> Literal["disabled", "stub", "assets", "remote", "unsupported"]:
     normalized = (value or "disabled").strip().lower()
     if normalized in {"", "disabled", "off", "false", "0"}:
         return "disabled"

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cpicann-xrd"
-version = "0.1.0rc1"
+version = "0.2.0rc1"
 description = "Reproducible XRD phase-identification application around CPICANN."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

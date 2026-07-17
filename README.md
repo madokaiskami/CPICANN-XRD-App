@@ -2,7 +2,7 @@
 
 CPICANN-XRD-App 是围绕预训练 CPICANN 单相模型构建的本地 XRD 物相候选排序工具，提供 Web、CLI、API 和 Docker 部署方式。
 
-当前版本为 `v0.1.0-rc1` 发布候选。发布候选验收记录见 [docs/release_validation.md](docs/release_validation.md)。
+当前版本为 `v0.2.0-rc1` 发布候选。CPICANN 单相识别仍是默认工作流；XDecomposer 多相功能为显式 opt-in 且保持 `experimental` 状态。
 
 ## 快速开始
 
@@ -125,6 +125,7 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run uvicorn cpicann_xrd.api.main
 curl -fsS http://127.0.0.1:8000/healthz
 curl -fsS http://127.0.0.1:8000/readyz
 curl -fsS http://127.0.0.1:8000/v1/models
+curl -fsS http://127.0.0.1:8000/capabilities
 ```
 
 上传批量样品：
@@ -142,6 +143,54 @@ curl -fsS -X POST http://127.0.0.1:8000/v1/batch \
   -F "files=@samples/CPICANN识别/1-norm.txt" \
   -F "files=@samples/CPICANN识别/3-norm.txt"
 ```
+
+异步任务 API：
+
+```bash
+curl -fsS -X POST http://127.0.0.1:8000/v1/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"capabilities"}'
+```
+
+返回的 `job_id` 可用于：
+
+```text
+GET  /v1/jobs/{job_id}
+GET  /v1/jobs/{job_id}/result
+GET  /v1/jobs/{job_id}/download
+POST /v1/jobs/{job_id}/cancel
+```
+
+当前 job store 是 in-process API contract 实现；生产多人环境应替换为持久化队列。
+
+## XDecomposer 实验入口
+
+XDecomposer 不会默认启用，也不会自动下载权重。
+
+检查能力状态：
+
+```bash
+UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run cpicann-xrd xdecomposer doctor --json
+```
+
+验证本地资产 manifest：
+
+```bash
+UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run cpicann-xrd xdecomposer verify-assets \
+  --manifest models/xdecomposer/manifest.yaml \
+  --production
+```
+
+Stub 合约测试：
+
+```bash
+UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run cpicann-xrd decompose \
+  --input examples/spectra/0-norm.txt \
+  --xdecomposer-backend stub \
+  --json
+```
+
+真实 XDecomposer 推理需要授权 checkpoint、MAE checkpoint、reference bank、manifest SHA-256 和人工许可验收。
 
 ## Docker 部署
 
@@ -173,6 +222,12 @@ API 地址：
 
 ```text
 http://localhost:8000
+```
+
+XDecomposer worker profile：
+
+```bash
+docker compose -f compose.yaml -f compose.xdecomposer.yaml --profile xdecomposer up -d --build
 ```
 
 容器内真实模型 CLI 示例：
@@ -225,9 +280,11 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run python -m build
 ## 供应链与发布
 
 - CPU Dockerfile 位于 `docker/Dockerfile.cpu`，默认基础镜像使用 GHCR。
+- XDecomposer worker Dockerfile 位于 `docker/Dockerfile.xdecomposer`。
 - 运行时依赖清单位于 `docs/dependency-inventory.txt`，由 `uv export --frozen` 从 `uv.lock` 生成。
 - 普通 CI 不访问真实权重 secret；真实模型 smoke test 在独立 workflow 中运行。
 - 发布镜像不包含 `models/`、`runs/`、`.env` 或 checkpoint 文件。
+- 发布前运行 `python scripts/release_preflight.py` 检查权重、token、运行数据和内部路径是否误入 Git。
 
 ## 参考文档
 
@@ -235,6 +292,11 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run python -m build
 - 发布候选验收：[docs/release_validation.md](docs/release_validation.md)
 - 已知限制：[docs/known_limitations.md](docs/known_limitations.md)
 - 安全边界：[SECURITY.md](SECURITY.md)
+- XDecomposer 科学验证草稿：[docs/xdecomposer_scientific_validation.md](docs/xdecomposer_scientific_validation.md)
+- 部署手册：[docs/deployment_runbook.md](docs/deployment_runbook.md)
+- 回滚说明：[docs/rollback.md](docs/rollback.md)
+- v0.2.0 发布说明：[docs/release_notes_v0.2.0.md](docs/release_notes_v0.2.0.md)
+- 第三方许可说明：[docs/third_party_licenses.md](docs/third_party_licenses.md)
 - 引用信息：[CITATION.cff](CITATION.cff)
 - 第三方与权重再分发说明：[NOTICE](NOTICE)
 
@@ -244,3 +306,4 @@ UV_CACHE_DIR=/tmp/cpicann-uv-cache .venv/bin/uv run python -m build
 - 模型权重、运行输出和 `.env` 文件不得提交到 Git。
 - 预测置信度是模型排序分数，不是物相含量或定量组分。
 - Web/API 适合可信内网或本机使用；公网部署应额外配置反向代理、HTTPS 和访问控制。
+- XDecomposer 多相分解尚未完成科学验证，不应标记为生产已验证功能。

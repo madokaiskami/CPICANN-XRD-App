@@ -247,8 +247,7 @@ def render_joint_identification_report(result: MultiphaseIdentificationResult) -
         if component.cpicann is not None and component.cpicann.predictions:
             first = component.cpicann.predictions[0]
             top_prediction = (
-                f"{first.phase.formula} "
-                f"({first.filtered_confidence:.3f} conditional confidence)"
+                f"{first.phase.formula} ({first.filtered_confidence:.3f} conditional confidence)"
             )
         warnings = "; ".join(component.warnings) if component.warnings else "-"
         lines.append(
@@ -433,9 +432,9 @@ def _component_error(exc: Exception) -> ComponentError:
     return ComponentError(code=exc.__class__.__name__, message=str(exc) or repr(exc))
 
 
-def _overall_status(components: list[ComponentIdentificationResult]) -> Literal[
-    "success", "partial", "failed"
-]:
+def _overall_status(
+    components: list[ComponentIdentificationResult],
+) -> Literal["success", "partial", "failed"]:
     if components and all(component.status == "success" for component in components):
         return "success"
     if any(component.status == "success" for component in components):
