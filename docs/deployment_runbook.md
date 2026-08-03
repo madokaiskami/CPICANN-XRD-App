@@ -8,11 +8,15 @@ Web app only:
 docker compose up -d --build
 ```
 
+This starts CPICANN single-phase Web only. XDecomposer modes stay disabled.
+
 Web + API:
 
 ```bash
 docker compose --profile api up -d --build
 ```
+
+This starts CPICANN Web and API only. It does not start the XDecomposer worker.
 
 Complete local/intranet deployment, including Web, API and XDecomposer worker:
 
@@ -24,6 +28,10 @@ docker compose \
   --profile xdecomposer \
   up -d --build
 ```
+
+In this mode, app/API containers wait for `xdecomposer-worker` to become
+healthy. The worker healthcheck uses `/readyz`, and the worker preloads the real
+XDecomposer model at startup when assets are valid.
 
 Check container state and endpoints:
 

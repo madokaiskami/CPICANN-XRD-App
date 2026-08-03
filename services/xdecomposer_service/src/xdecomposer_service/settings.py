@@ -18,6 +18,7 @@ class Settings:
     require_upstream_import: bool = False
     expected_python_minor: str = "3.10"
     device: str = "auto"
+    preload_model: bool = False
 
 
 def load_settings() -> Settings:
@@ -34,6 +35,7 @@ def load_settings() -> Settings:
         require_upstream_import=_env_bool("XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT", default=False),
         expected_python_minor=os.environ.get("XDECOMPOSER_EXPECTED_PYTHON", "3.10"),
         device=os.environ.get("XDECOMPOSER_DEVICE", "auto"),
+        preload_model=_env_bool("XDECOMPOSER_PRELOAD_MODEL", default=False),
     )
 
 

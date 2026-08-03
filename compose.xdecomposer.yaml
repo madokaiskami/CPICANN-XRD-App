@@ -1,4 +1,26 @@
 services:
+  app:
+    environment:
+      CPICANN_XDECOMPOSER_BACKEND: remote
+      CPICANN_XDECOMPOSER_SERVICE_URL: http://xdecomposer-worker:8100
+      CPICANN_XDECOMPOSER_READY_TIMEOUT_SECONDS: "10"
+      CPICANN_XDECOMPOSER_READY_RETRIES: "2"
+      CPICANN_XDECOMPOSER_TIMEOUT_SECONDS: "300"
+    depends_on:
+      xdecomposer-worker:
+        condition: service_healthy
+
+  api:
+    environment:
+      CPICANN_XDECOMPOSER_BACKEND: remote
+      CPICANN_XDECOMPOSER_SERVICE_URL: http://xdecomposer-worker:8100
+      CPICANN_XDECOMPOSER_READY_TIMEOUT_SECONDS: "10"
+      CPICANN_XDECOMPOSER_READY_RETRIES: "2"
+      CPICANN_XDECOMPOSER_TIMEOUT_SECONDS: "300"
+    depends_on:
+      xdecomposer-worker:
+        condition: service_healthy
+
   xdecomposer-worker:
     profiles: ["xdecomposer"]
     build:
@@ -12,6 +34,7 @@ services:
       XDECOMPOSER_EXPECTED_PYTHON: "3.10"
       XDECOMPOSER_REQUIRE_UPSTREAM_IMPORT: "true"
       XDECOMPOSER_SOURCE_DIR: /srv/xdecomposer_service/vendor/XDecomposer
+      XDECOMPOSER_PRELOAD_MODEL: "true"
     volumes:
       - ./models/xdecomposer:/app/models/xdecomposer:ro
       - ./runs/xdecomposer:/app/runs/xdecomposer
@@ -30,8 +53,8 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/healthz', timeout=3).read()"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/readyz', timeout=10).read()"
       interval: 30s
-      timeout: 5s
+      timeout: 12s
       retries: 3
-      start_period: 30s
+      start_period: 90s

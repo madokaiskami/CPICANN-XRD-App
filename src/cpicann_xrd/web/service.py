@@ -8,6 +8,7 @@ from typing import Literal, Protocol
 
 from cpicann_xrd.catalog.elements import VALID_ELEMENT_SYMBOLS
 from cpicann_xrd.decomposition.capabilities import Capabilities
+from cpicann_xrd.decomposition.schemas import DecomposedComponent, XDecomposerPreprocessingMetadata
 
 MAX_UPLOAD_FILES = 20
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -70,6 +71,33 @@ def web_mode_options(capabilities: Capabilities) -> list[WebModeOption]:
             reason=reason,
         ),
     ]
+
+
+def component_pattern_csv(
+    component: DecomposedComponent,
+    preprocessing: XDecomposerPreprocessingMetadata,
+) -> bytes:
+    """Return one decomposed component pattern as CSV bytes for browser download."""
+    if component.pattern is None:
+        raise ValueError("component pattern is not available")
+    if len(component.pattern) != preprocessing.output_points:
+        raise ValueError("component pattern length does not match preprocessing metadata")
+    if preprocessing.output_points == 1:
+        angles = [preprocessing.two_theta_min]
+    else:
+        step = (preprocessing.two_theta_max - preprocessing.two_theta_min) / (
+            preprocessing.output_points - 1
+        )
+        angles = [
+            preprocessing.two_theta_min + step * index
+            for index in range(preprocessing.output_points)
+        ]
+    lines = ["two_theta,intensity"]
+    lines.extend(
+        f"{angle:.8g},{intensity:.8g}"
+        for angle, intensity in zip(angles, component.pattern, strict=True)
+    )
+    return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def stage_uploaded_files(

@@ -9,8 +9,6 @@ services:
     environment:
       CPICANN_MODEL_DIR: /app/models
       CPICANN_API_RUN_ROOT: /app/runs/api
-      CPICANN_XDECOMPOSER_BACKEND: remote
-      CPICANN_XDECOMPOSER_SERVICE_URL: http://xdecomposer-worker:8100
     volumes:
       - ./models:/app/models:ro
       - ./runs:/app/runs
@@ -39,8 +37,6 @@ services:
     environment:
       CPICANN_MODEL_DIR: /app/models
       CPICANN_API_RUN_ROOT: /app/runs/api
-      CPICANN_XDECOMPOSER_BACKEND: remote
-      CPICANN_XDECOMPOSER_SERVICE_URL: http://xdecomposer-worker:8100
     volumes:
       - ./models:/app/models:ro
       - ./runs:/app/runs

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import atexit
+import hashlib
 import os
 import shutil
 import tempfile
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -14,9 +16,17 @@ import streamlit as st
 
 from cpicann_xrd.catalog.catalog import PhaseCatalog
 from cpicann_xrd.core.spectrum_io import read_spectrum_file
+from cpicann_xrd.decomposition.artifacts import (
+    DecompositionArtifactPaths,
+    write_decomposition_artifacts,
+)
 from cpicann_xrd.decomposition.capabilities import build_capabilities
 from cpicann_xrd.decomposition.client import XDecomposerHttpClient
 from cpicann_xrd.decomposition.exceptions import DecompositionError
+from cpicann_xrd.decomposition.orchestration import (
+    MultiphaseIdentificationResult,
+    identify_decomposed_components,
+)
 from cpicann_xrd.decomposition.schemas import XDecomposerRequest, XDecomposerResult
 from cpicann_xrd.exceptions import CpicannXrdError
 from cpicann_xrd.model.protocol import InferenceBackend
@@ -26,11 +36,27 @@ from cpicann_xrd.services.runtime import build_runtime
 from cpicann_xrd.web.service import (
     UploadedFileLike,
     available_elements,
+    component_pattern_csv,
     stage_uploaded_files,
     web_mode_options,
 )
 
 WEB_BACKEND_NAME = "cpicann"
+
+
+@dataclass(frozen=True)
+class WebDecompositionRun:
+    """One Web decomposition result with downloadable artifacts."""
+
+    result: XDecomposerResult
+    artifacts: DecompositionArtifactPaths | None
+
+
+@dataclass(frozen=True)
+class WebIdentificationRun:
+    """One Web decomposition plus CPICANN identification result."""
+
+    result: MultiphaseIdentificationResult
 
 
 def main() -> None:
@@ -49,6 +75,9 @@ def main() -> None:
             "模式",
             [option.label for option in enabled_mode_options],
             index=0,
+        )
+        selected_mode = next(
+            option for option in enabled_mode_options if option.label == mode_label
         )
         for option in mode_options:
             if not option.enabled:
@@ -74,10 +103,10 @@ def main() -> None:
     if not uploaded_files:
         st.stop()
 
-    if mode_label != "单相物相识别":
+    if selected_mode.key == "decompose":
         if st.button("运行多相分解", type="primary"):
             try:
-                results = _run_decomposition_files(
+                decomposition_runs = _run_decomposition_files(
                     uploaded_files=cast("list[UploadedFileLike]", list(uploaded_files)),
                     max_sources=int(max_sources),
                     activity_threshold=float(activity_threshold),
@@ -85,11 +114,46 @@ def main() -> None:
             except (DecompositionError, CpicannXrdError, ValueError) as exc:
                 st.error(str(exc))
                 return
-            st.session_state["web_decomposition_results"] = results
-            _render_decomposition_results(results)
+            st.session_state["web_decomposition_runs"] = decomposition_runs
+            st.session_state.pop("web_identification_runs", None)
+            _render_decomposition_results(decomposition_runs)
         elif "web_decomposition_results" in st.session_state:
+            # Backward compatibility for sessions opened before this deployment.
             _render_decomposition_results(
-                cast("list[XDecomposerResult]", st.session_state["web_decomposition_results"])
+                [
+                    WebDecompositionRun(result=result, artifacts=None)
+                    for result in cast(
+                        "list[XDecomposerResult]", st.session_state["web_decomposition_results"]
+                    )
+                ]
+            )
+        elif "web_decomposition_runs" in st.session_state:
+            _render_decomposition_results(
+                cast("list[WebDecompositionRun]", st.session_state["web_decomposition_runs"])
+            )
+        return
+
+    if selected_mode.key == "decompose_and_identify":
+        if st.button("运行多相分解并识别", type="primary"):
+            try:
+                identification_runs = _run_identification_files(
+                    uploaded_files=cast("list[UploadedFileLike]", list(uploaded_files)),
+                    max_sources=int(max_sources),
+                    activity_threshold=float(activity_threshold),
+                    backend_name=backend_name,
+                    include_must=include_must,
+                    allowed_elements=allowed_elements or None,
+                    top_k=int(top_k),
+                )
+            except (DecompositionError, CpicannXrdError, ValueError) as exc:
+                st.error(str(exc))
+                return
+            st.session_state["web_identification_runs"] = identification_runs
+            st.session_state.pop("web_decomposition_runs", None)
+            _render_identification_results(identification_runs)
+        elif "web_identification_runs" in st.session_state:
+            _render_identification_results(
+                cast("list[WebIdentificationRun]", st.session_state["web_identification_runs"])
             )
         return
 
@@ -169,7 +233,7 @@ def _run_decomposition_files(
     uploaded_files: list[UploadedFileLike],
     max_sources: int,
     activity_threshold: float,
-) -> list[XDecomposerResult]:
+) -> list[WebDecompositionRun]:
     previous_temp_dir = st.session_state.get("web_temp_dir")
     if previous_temp_dir:
         shutil.rmtree(previous_temp_dir, ignore_errors=True)
@@ -178,31 +242,92 @@ def _run_decomposition_files(
     st.session_state["web_temp_dir"] = str(temp_root)
     prepared = stage_uploaded_files(uploaded_files, input_dir=temp_root / "inputs")
     st.session_state["upload_warnings"] = prepared.warnings
-    client = XDecomposerHttpClient(
-        base_url=os.environ.get("CPICANN_XDECOMPOSER_SERVICE_URL", "http://127.0.0.1:8100"),
-        timeout_seconds=float(os.environ.get("CPICANN_XDECOMPOSER_TIMEOUT_SECONDS", "120")),
-    )
-    results: list[XDecomposerResult] = []
+    client = _xdecomposer_client()
+    results: list[WebDecompositionRun] = []
     for input_path in prepared.input_paths:
         read_result = read_spectrum_file(input_path)
         if read_result.spectrum is None:
             message = "; ".join(diagnostic.message for diagnostic in read_result.diagnostics)
             raise ValueError(message or f"failed to read {input_path.name}")
         spectrum = read_result.spectrum
-        results.append(
-            client.decompose(
-                XDecomposerRequest(
-                    sample_id=spectrum.sample_id,
-                    source_filename=spectrum.source_filename,
-                    two_theta=spectrum.two_theta,
-                    intensity=spectrum.intensity,
-                    max_sources=max_sources,
-                    activity_threshold=activity_threshold,
-                    return_component_patterns=False,
-                )
-            )
+        request = XDecomposerRequest(
+            sample_id=spectrum.sample_id,
+            source_filename=spectrum.source_filename,
+            two_theta=spectrum.two_theta,
+            intensity=spectrum.intensity,
+            max_sources=max_sources,
+            activity_threshold=activity_threshold,
+            return_component_patterns=True,
         )
+        result = client.decompose(request)
+        artifacts = write_decomposition_artifacts(
+            run_dir=temp_root / "runs" / spectrum.sample_id,
+            request=request,
+            result=result,
+            source_sha256=spectrum.sha256 or _sha256_file(input_path),
+            source_filename=spectrum.source_filename,
+            git_commit=os.environ.get("CPICANN_GIT_COMMIT", "UNKNOWN"),
+            device=os.environ.get("XDECOMPOSER_DEVICE", "remote"),
+        )
+        results.append(WebDecompositionRun(result=result, artifacts=artifacts))
     return results
+
+
+def _run_identification_files(
+    *,
+    uploaded_files: list[UploadedFileLike],
+    max_sources: int,
+    activity_threshold: float,
+    backend_name: str,
+    include_must: list[str],
+    allowed_elements: list[str] | None,
+    top_k: int,
+) -> list[WebIdentificationRun]:
+    backend, catalog = _cached_runtime(backend_name)
+    previous_temp_dir = st.session_state.get("web_temp_dir")
+    if previous_temp_dir:
+        shutil.rmtree(previous_temp_dir, ignore_errors=True)
+    temp_root = Path(tempfile.mkdtemp(prefix="cpicann-web-xdecomposer-identify-"))
+    atexit.register(shutil.rmtree, temp_root, ignore_errors=True)
+    st.session_state["web_temp_dir"] = str(temp_root)
+    prepared = stage_uploaded_files(uploaded_files, input_dir=temp_root / "inputs")
+    st.session_state["upload_warnings"] = prepared.warnings
+    client = _xdecomposer_client()
+    results: list[WebIdentificationRun] = []
+    for input_path in prepared.input_paths:
+        read_result = read_spectrum_file(input_path)
+        if read_result.spectrum is None:
+            message = "; ".join(diagnostic.message for diagnostic in read_result.diagnostics)
+            raise ValueError(message or f"failed to read {input_path.name}")
+        spectrum = read_result.spectrum
+        result = identify_decomposed_components(
+            request=XDecomposerRequest(
+                sample_id=spectrum.sample_id,
+                source_filename=spectrum.source_filename,
+                two_theta=spectrum.two_theta,
+                intensity=spectrum.intensity,
+                max_sources=max_sources,
+                activity_threshold=activity_threshold,
+            ),
+            decomposition_backend=client,
+            phase_backend=backend,
+            catalog=catalog,
+            top_k=top_k,
+            filter_spec=FilterSpec(
+                include_must=frozenset(include_must),
+                allowed_elements=None if allowed_elements is None else frozenset(allowed_elements),
+            ),
+        )
+        results.append(WebIdentificationRun(result=result))
+    return results
+
+
+def _xdecomposer_client() -> XDecomposerHttpClient:
+    return XDecomposerHttpClient(
+        base_url=os.environ.get("CPICANN_XDECOMPOSER_SERVICE_URL", "http://127.0.0.1:8100"),
+        timeout_seconds=float(os.environ.get("CPICANN_XDECOMPOSER_TIMEOUT_SECONDS", "300")),
+        retries=int(os.environ.get("CPICANN_XDECOMPOSER_RETRIES", "1")),
+    )
 
 
 def _snapshot_run_result(result: BatchRunResult) -> BatchRunResult:
@@ -273,11 +398,12 @@ def _render_result(result: BatchRunResult) -> None:
     )
 
 
-def _render_decomposition_results(results: list[XDecomposerResult]) -> None:
+def _render_decomposition_results(runs: list[WebDecompositionRun]) -> None:
     st.subheader("XDecomposer 多相分解")
     for warning in st.session_state.get("upload_warnings", []):
         st.warning(warning)
-    for result in results:
+    for run in runs:
+        result = run.result
         st.markdown(f"### {result.sample_id}")
         st.caption(
             "Component 是 XDecomposer 分解输出，不等同于已确认物相；"
@@ -296,6 +422,78 @@ def _render_decomposition_results(results: list[XDecomposerResult]) -> None:
             for component in result.components
         ]
         st.markdown(_markdown_table(rows))
+        st.markdown("#### 下载")
+        if run.artifacts is not None:
+            _download_file(
+                f"{result.sample_id}_decomposition_summary.csv",
+                run.artifacts.summary_csv,
+                "text/csv",
+            )
+            _download_file(
+                f"{result.sample_id}_decomposition_report.md",
+                run.artifacts.report_md,
+                "text/markdown",
+            )
+            _download_file(
+                f"{result.sample_id}_result_bundle.zip",
+                run.artifacts.bundle_zip,
+                "application/zip",
+            )
+        for component in result.components:
+            if component.pattern is None:
+                continue
+            slot = component.original_slot_index
+            st.download_button(
+                label=f"下载 slot {slot} CSV",
+                data=component_pattern_csv(component, result.preprocessing),
+                file_name=f"{result.sample_id}_slot_{slot}.csv",
+                mime="text/csv",
+            )
+
+
+def _render_identification_results(runs: list[WebIdentificationRun]) -> None:
+    st.subheader("XDecomposer 多相分解并识别")
+    for warning in st.session_state.get("upload_warnings", []):
+        st.warning(warning)
+    for run in runs:
+        result = run.result
+        st.markdown(f"### {result.sample_id}")
+        st.metric("成功识别 component", result.successful_component_count)
+        st.metric("失败 component", result.failed_component_count)
+        st.caption("每个 component 先由 XDecomposer 分解，再用 CPICANN 单相模型进行候选排序。")
+        rows = []
+        for component in result.components:
+            top_prediction = None
+            if component.cpicann is not None and component.cpicann.predictions:
+                top_prediction = component.cpicann.predictions[0]
+            rows.append(
+                {
+                    "component": component.component_index,
+                    "slot": component.original_slot_index,
+                    "status": component.status,
+                    "active": component.is_active,
+                    "estimated_weight": component.estimated_weight,
+                    "top_formula": "" if top_prediction is None else top_prediction.phase.formula,
+                    "space_group": ""
+                    if top_prediction is None
+                    else top_prediction.phase.space_group,
+                    "confidence": ""
+                    if top_prediction is None
+                    else top_prediction.filtered_confidence,
+                    "error": "" if component.error is None else component.error.message,
+                }
+            )
+        st.markdown(_markdown_table(rows))
+        st.download_button(
+            label=f"下载 {result.sample_id} 识别报告",
+            data=result.report_markdown.encode("utf-8"),
+            file_name=f"{result.sample_id}_multiphase_identification.md",
+            mime="text/markdown",
+        )
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _download_file(label: str, path: Path, mime: str) -> None:

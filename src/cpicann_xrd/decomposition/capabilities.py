@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -18,6 +19,8 @@ from cpicann_xrd.schemas import StrictBaseModel
 XDECOMPOSER_BACKEND_ENV = "CPICANN_XDECOMPOSER_BACKEND"
 XDECOMPOSER_MANIFEST_ENV = "CPICANN_XDECOMPOSER_MANIFEST"
 XDECOMPOSER_SERVICE_URL_ENV = "CPICANN_XDECOMPOSER_SERVICE_URL"
+XDECOMPOSER_READY_TIMEOUT_ENV = "CPICANN_XDECOMPOSER_READY_TIMEOUT_SECONDS"
+XDECOMPOSER_READY_RETRIES_ENV = "CPICANN_XDECOMPOSER_READY_RETRIES"
 
 
 class BackendCapability(StrictBaseModel):
@@ -135,15 +138,29 @@ def _manifest_from_env() -> Path | None:
 
 def _remote_capability() -> BackendCapability:
     base_url = os.environ.get(XDECOMPOSER_SERVICE_URL_ENV, "http://127.0.0.1:8100").rstrip("/")
-    try:
-        with urllib.request.urlopen(f"{base_url}/readyz", timeout=2.0) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (OSError, TimeoutError, json.JSONDecodeError, urllib.error.URLError) as exc:
+    timeout = _env_float(XDECOMPOSER_READY_TIMEOUT_ENV, default=10.0)
+    retries = _env_int(XDECOMPOSER_READY_RETRIES_ENV, default=2)
+    last_error: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(f"{base_url}/readyz", timeout=timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except (OSError, TimeoutError, json.JSONDecodeError, urllib.error.URLError) as exc:
+            last_error = exc
+            if attempt < retries:
+                time.sleep(0.25)
+    else:
         return BackendCapability(
             enabled=True,
             available=False,
             reason="service_unavailable",
-            details={"url": base_url, "reason": repr(exc)},
+            details={
+                "url": base_url,
+                "timeout_seconds": str(timeout),
+                "retries": str(retries),
+                "reason": repr(last_error),
+            },
         )
     if payload.get("status") == "ready":
         assets = payload.get("assets") if isinstance(payload.get("assets"), dict) else {}
@@ -162,3 +179,23 @@ def _remote_capability() -> BackendCapability:
         reason="service_not_ready",
         details={"url": base_url, "status": str(payload.get("status", ""))},
     )
+
+
+def _env_float(name: str, *, default: float) -> float:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, *, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return default

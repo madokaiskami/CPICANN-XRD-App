@@ -64,7 +64,7 @@ def test_remote_backend_reports_service_unavailable() -> None:
 def test_remote_backend_reports_ready_from_worker(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(url: str, timeout: float) -> _FakeResponse:
         assert url == "http://worker:8100/readyz"
-        assert timeout == 2.0
+        assert timeout == 10.0
         return _FakeResponse(
             {
                 "status": "ready",
@@ -81,6 +81,32 @@ def test_remote_backend_reports_ready_from_worker(monkeypatch: pytest.MonkeyPatc
     assert capability.available is True
     assert capability.reason == "service_ready"
     assert capability.details["model_id"] == "xdecomposer-local"
+
+
+def test_remote_backend_uses_configurable_timeout_and_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    def flaky_urlopen(url: str, timeout: float) -> _FakeResponse:
+        nonlocal calls
+        calls += 1
+        assert url == "http://worker:8100/readyz"
+        assert timeout == 3.5
+        if calls == 1:
+            raise TimeoutError("slow worker")
+        return _FakeResponse({"status": "ready", "assets": {"model_id": "xdecomposer-local"}})
+
+    monkeypatch.setenv("CPICANN_XDECOMPOSER_SERVICE_URL", "http://worker:8100")
+    monkeypatch.setenv("CPICANN_XDECOMPOSER_READY_TIMEOUT_SECONDS", "3.5")
+    monkeypatch.setenv("CPICANN_XDECOMPOSER_READY_RETRIES", "1")
+    monkeypatch.setattr("urllib.request.urlopen", flaky_urlopen)
+
+    capability = evaluate_xdecomposer_capability(backend="remote")
+
+    assert calls == 2
+    assert capability.available is True
+    assert capability.reason == "service_ready"
 
 
 class _FakeResponse:

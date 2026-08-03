@@ -13,11 +13,12 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /srv/xdecomposer_service
 
 COPY services/xdecomposer_service/pyproject.toml services/xdecomposer_service/requirements.lock ./
-COPY services/xdecomposer_service/src ./src
-COPY services/xdecomposer_service/vendor ./vendor
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.lock
+
+COPY services/xdecomposer_service/src ./src
+COPY services/xdecomposer_service/vendor ./vendor
 
 RUN groupadd --system --gid 10002 xdecomposer \
     && useradd --system --uid 10002 --gid xdecomposer --home-dir /srv/xdecomposer_service --shell /usr/sbin/nologin xdecomposer \

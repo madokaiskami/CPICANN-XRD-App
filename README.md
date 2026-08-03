@@ -225,6 +225,8 @@ CPU 镜像不包含真实权重。`models/` 和 `runs/` 通过卷挂载保留在
 docker compose up -d --build
 ```
 
+该命令只用于 CPICANN 单相识别；不会启动 XDecomposer worker，Web 中多相模式会保持禁用。
+
 Web 地址：
 
 ```text
@@ -242,6 +244,8 @@ http://<服务器内网IP>:8501
 ```bash
 docker compose --profile api up -d --build
 ```
+
+该命令同样不会启动 XDecomposer worker。
 
 API 地址：
 
@@ -270,6 +274,9 @@ models/xdecomposer/manifest.yaml
 
 Dockerfile 会把 vendored XDecomposer 源码复制进 worker 镜像，但不会复制真实
 checkpoint。
+
+完整部署中，`app` 和 `api` 会等待 `xdecomposer-worker` 通过 `/readyz` 后再启动。
+worker 启动时会预加载真实模型，避免第一次点击多相分解时才加载 checkpoint。
 
 部署后检查：
 

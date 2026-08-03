@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,7 @@ class RealXDecomposerBackend:
         self._manifest = _load_verified_manifest(settings.manifest_path)
         self._model: Any | None = None
         self._torch: Any | None = None
+        self._load_lock = threading.Lock()
 
     def decompose(self, request: XDecomposerRequest) -> XDecomposerResult:
         """Run one hash-verified XDecomposer decomposition."""
@@ -130,6 +132,11 @@ class RealXDecomposerBackend:
             artifacts={},
         )
 
+    def warm_up(self) -> None:
+        """Load PyTorch, checkpoints and model weights before the first request."""
+        torch = self._load_torch()
+        self._load_model(torch)
+
     def _load_torch(self) -> Any:
         if self._torch is not None:
             return self._torch
@@ -157,45 +164,48 @@ class RealXDecomposerBackend:
     def _load_model(self, torch: Any) -> Any:
         if self._model is not None:
             return self._model
+        with self._load_lock:
+            if self._model is not None:
+                return self._model
 
-        try:
-            module = import_upstream_module(self._settings.upstream_source_dir)
-        except RuntimeError as exc:
-            raise XDecomposerBackendError(
-                "upstream_not_importable",
-                "Upstream XDecomposer source is not importable",
-                details={
-                    "source_dir": (
-                        None
-                        if self._settings.upstream_source_dir is None
-                        else str(self._settings.upstream_source_dir)
-                    ),
-                    "reason": str(exc),
-                },
-            ) from exc
+            try:
+                module = import_upstream_module(self._settings.upstream_source_dir)
+            except RuntimeError as exc:
+                raise XDecomposerBackendError(
+                    "upstream_not_importable",
+                    "Upstream XDecomposer source is not importable",
+                    details={
+                        "source_dir": (
+                            None
+                            if self._settings.upstream_source_dir is None
+                            else str(self._settings.upstream_source_dir)
+                        ),
+                        "reason": str(exc),
+                    },
+                ) from exc
 
-        checkpoint = torch.load(
-            self._manifest.separator_checkpoint.path,
-            map_location=self._device(torch),
-            weights_only=False,
-        )
-        mae_checkpoint = torch.load(
-            self._manifest.mae_checkpoint.path,
-            map_location="cpu",
-            weights_only=False,
-        )
-        model = _construct_model_from_checkpoints(
-            module,
-            checkpoint=checkpoint,
-            mae_checkpoint=mae_checkpoint,
-            fallback_num_sources=self._manifest.num_sources,
-        )
-        state_dict = _extract_state_dict(checkpoint)
-        model.load_state_dict(_strip_module_prefix(state_dict), strict=True)
-        model.to(self._device(torch))
-        model.eval()
-        self._model = model
-        return model
+            checkpoint = torch.load(
+                self._manifest.separator_checkpoint.path,
+                map_location=self._device(torch),
+                weights_only=False,
+            )
+            mae_checkpoint = torch.load(
+                self._manifest.mae_checkpoint.path,
+                map_location="cpu",
+                weights_only=False,
+            )
+            model = _construct_model_from_checkpoints(
+                module,
+                checkpoint=checkpoint,
+                mae_checkpoint=mae_checkpoint,
+                fallback_num_sources=self._manifest.num_sources,
+            )
+            state_dict = _extract_state_dict(checkpoint)
+            model.load_state_dict(_strip_module_prefix(state_dict), strict=True)
+            model.to(self._device(torch))
+            model.eval()
+            self._model = model
+            return model
 
 
 def _load_verified_manifest(path: Path) -> RuntimeManifest:

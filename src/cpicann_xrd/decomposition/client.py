@@ -19,8 +19,8 @@ class XDecomposerHttpClient:
     """Small stdlib HTTP client with timeout and retry controls."""
 
     base_url: str
-    timeout_seconds: float = 30.0
-    retries: int = 0
+    timeout_seconds: float = 300.0
+    retries: int = 1
     opener: Any = urllib.request.urlopen
 
     def decompose(self, request: XDecomposerRequest) -> XDecomposerResult:
